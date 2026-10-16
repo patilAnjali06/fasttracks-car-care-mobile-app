@@ -1,0 +1,2554 @@
+export interface AuthUser {
+  id: string;
+  username: string;
+  name: string;
+  role: string;
+  employeeId?: string | null;
+  designation?: string | null;
+  monthlySalary?: number | null;
+  salaryType?: string | null;
+  joiningDate?: string | null;
+}
+
+export interface LoginResponse {
+  token: string;
+  user: AuthUser;
+  mustChangePassword?: boolean;
+}
+
+export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'HALF_DAY' | 'LEAVE' | 'WEEKEND';
+
+export interface AttendanceRecord {
+  id: string;
+  userId: string;
+  date: string;
+  clockIn: string | null;
+  clockOut: string | null;
+  isLate: boolean;
+  status: AttendanceStatus;
+  user: { id: string; name: string; username: string; role: string };
+}
+
+export interface ApiEnvelope<T> {
+  success: boolean;
+  data: T;
+  message?: string;
+}
+
+export type ConversationCategory = 'CUSTOMER_WHATSAPP' | 'INSTAGRAM' | 'EMPLOYEE' | 'OWNER' | 'CALL';
+export type ConversationStatus = 'ACTIVE' | 'WAITING' | 'CLOSED';
+
+export interface ConversationMessage {
+  id: string;
+  senderType: 'CUSTOMER' | 'EMPLOYEE' | 'SYSTEM';
+  senderName: string | null;
+  content: string;
+  createdAt: string;
+  deliveryStatus?: string | null;
+}
+
+export interface Conversation {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  category: ConversationCategory;
+  status: ConversationStatus;
+  isHighValue: boolean;
+  lastMessageAt: string | null;
+  assignedTo: { id: string; name: string; username: string } | null;
+  messages: ConversationMessage[];
+}
+
+export type TaskStatus = 'PENDING' | 'ONGOING' | 'COMPLETED' | 'CANCELLED';
+
+export interface Task {
+  id: string;
+  title: string;
+  description: string | null;
+  assignedToId: string;
+  assignedTo: { id: string; name: string; role: string };
+  assignedById: string;
+  assignedBy: { id: string; name: string };
+  status: TaskStatus;
+  dueDate: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  date: string;
+  createdAt: string;
+  updatedAt: string;
+  /** Set when this task was auto-created from a manager's reply to a work-
+   *  documentation note — null for ordinary assigned tasks. The reply thread
+   *  itself lives on the WorkDocumentation, fetched via fetchWorkDoc(). */
+  sourceWorkDocId?: string | null;
+  /** Set when this task was auto-created via Assign Task on one specific
+   *  timesheet entry. Mutually exclusive with sourceWorkDocId in practice. */
+  sourceTimesheetId?: string | null;
+  sourceEntryId?: string | null;
+  /** This task's own conversation thread — only present when fetched via
+   *  fetchTask(id). */
+  entryReplies?: TimesheetEntryReply[];
+}
+
+export type RecurrenceType = 'DAILY' | 'TWICE_DAILY' | 'WEEKLY';
+export type RecurringTaskScope = 'ROLE' | 'INDIVIDUAL';
+export type RecurringTaskCompletionStatus = 'PENDING' | 'COMPLETED' | 'MISSED';
+
+export interface RecurringTaskDefinition {
+  id: string;
+  title: string;
+  description: string | null;
+  recurrence: RecurrenceType;
+  scope: RecurringTaskScope;
+  role: string | null;
+  assignedToId: string | null;
+  assignedTo: { id: string; name: string; role: string } | null;
+  createdBy: { id: string; name: string };
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface RecurringTaskCompletion {
+  id: string;
+  definitionId: string;
+  userId: string;
+  periodKey: string;
+  periodStart: string;
+  periodEnd: string;
+  status: RecurringTaskCompletionStatus;
+  completedAt: string | null;
+  definition: { id: string; title: string; description: string | null; recurrence: RecurrenceType };
+}
+
+export interface CustomerVehicleSummary {
+  id: string;
+  vehicleNumber: string;
+  make: string | null;
+  model: string | null;
+}
+
+export interface CustomerInvoiceSummary {
+  id: string;
+  invoiceNumber: string;
+  grandTotal: number;
+  paidAmount: number;
+  status: string;
+  createdAt: string;
+}
+
+export interface CustomerListItem {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  isRegular: boolean;
+  visitCount: number;
+  totalSpent: number;
+  invoiceCount: number;
+  vehicles: CustomerVehicleSummary[];
+  crmInvoices: CustomerInvoiceSummary[];
+  source: string | null;
+}
+
+export interface CustomerListResponse {
+  customers: CustomerListItem[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface CustomerProfileInvoice {
+  id: string;
+  invoiceNumber: string;
+  createdAt: string;
+  grandTotal: number;
+  balanceDue: number;
+  status: string;
+  vehicleNumber: string | null;
+  vehicleBrand: string | null;
+  vehicleModel: string | null;
+}
+
+export interface CustomerProfile {
+  customer: {
+    id: string;
+    name: string;
+    phone: string;
+    email: string | null;
+    createdAt: string;
+    isRegular: boolean;
+    visitCount: number;
+  };
+  stats: {
+    totalSpent: number;
+    avgPerVisit: number;
+    visitCount: number;
+    outstandingAmount: number;
+    customerSince: string | null;
+  };
+  vehicles: { registration: string; make: string | null; model: string | null; year: number | null }[];
+  invoices: CustomerProfileInvoice[];
+}
+
+export type JobCardStatus = 'IN_PROGRESS' | 'READY' | 'RELEASED' | 'WALKED_OUT';
+
+export interface JobCard {
+  id: string;
+  jobNumber: string;
+  reasonForVisit: string;
+  status: JobCardStatus;
+  estimatedTotal: number | null;
+  createdAt: string;
+  vehicle: { id: string; vehicleNumber: string; make: string | null; model: string | null } | null;
+  handledBy: { id: string; name: string };
+}
+
+// ── Job card detail — GET /job-cards/:id (backend/src/routes/job_cards.ts,
+// verified 2026-09-24). PATCH /:id diffs against this shape field-by-field
+// and writes a JobCardEdit row per changed field (never a blind overwrite).
+export interface JobCardDetail {
+  id: string;
+  jobNumber: string;
+  reasonForVisit: string;
+  status: JobCardStatus;
+  estimatedTotal: number | null;
+  ownerName: string | null;
+  ownerPhone: string | null;
+  customerRole: 'OWNER' | 'DRIVER' | null;
+  vehicleNumber: string | null;
+  createdAt: string;
+  customerId: string;
+  customer: { id: string; name: string; phone: string; email: string | null };
+  vehicleId: string | null;
+  vehicle: { id: string; vehicleNumber: string; make: string | null; model: string | null; year: string | null; fuel: string | null; colour: string | null } | null;
+  handledBy: { id: string; name: string; role: string; designation: string | null };
+  invoice: { id: string; invoiceNumber: string; grandTotal: number; paidAmount: number; balanceDue: number; status: string; createdAt: string } | null;
+  advanceReceiptsTotal: number;
+  listFirstPrintedAt: string | null;
+  listLastPrintedAt: string | null;
+  listPrintCount: number;
+}
+
+export interface UpdateJobCardInput {
+  reasonForVisit?: string;
+  ownerName?: string;
+  ownerPhone?: string;
+  customerRole?: 'OWNER' | 'DRIVER';
+  estimatedTotal?: number | null;
+  customerName?: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  vehicleNumber?: string;
+  vehicleMake?: string;
+  vehicleModel?: string;
+  vehicleYear?: string;
+  vehicleFuel?: string;
+  vehicleColour?: string;
+}
+
+export interface JobCardEdit {
+  id: string;
+  fieldName: string;
+  oldValue: string | null;
+  newValue: string | null;
+  editedBy: { id: string; name: string };
+  editedAt: string;
+}
+
+export interface JobCardListItem {
+  id: string;
+  text: string;
+  price: number | null;
+  isOriginal: boolean;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface JobCardInspectionMedia {
+  id: string;
+  url: string;
+  type: 'image' | 'video';
+  filename: string;
+  fileSize: number;
+  uploadedByName: string;
+  createdAt: string;
+}
+
+// Verification remarks — a separate, more restricted feature from staff
+// Remarks (backend/src/routes/customer_remarks_route.ts). Append-only, no
+// edit/delete routes exist at all.
+export interface CustomerRemark {
+  id: string;
+  jobCardId: string | null;
+  customerId: string | null;
+  note: string;
+  author: { id: string; name: string };
+  createdAt: string;
+}
+
+export type ReminderOccurrenceStatus = 'PENDING' | 'SNOOZED' | 'ACKNOWLEDGED' | 'DONE';
+
+export interface ReminderOccurrence {
+  id: string;
+  dueDate: string;
+  status: ReminderOccurrenceStatus;
+  snoozedUntil: string | null;
+  acknowledgedAt: string | null;
+  doneAt: string | null;
+  definition: {
+    id: string;
+    title: string;
+    description: string | null;
+    recurrenceType?: string;
+    leadDays: number;
+  };
+}
+
+// Reminder definitions — requireOwner (backend/src/routes/reminders.ts),
+// OWNER-only management of WHO gets reminded about WHAT and how often.
+// Distinct from the occurrence ack/snooze/done actions above, which any
+// authenticated user has for their own reminders. Added 2026-09-24
+// (full-parity pass) — this management view didn't exist on mobile at all.
+export type ReminderRecurrenceType = 'ONE_OFF' | 'DAILY' | 'WEEKLY' | 'MONTHLY';
+
+export interface ReminderDefinition {
+  id: string;
+  title: string;
+  description: string | null;
+  recurrenceType: ReminderRecurrenceType;
+  anchorDate: string;
+  leadDays: number;
+  isActive: boolean;
+  targets: { userId: string; user: { id: string; name: string } }[];
+}
+
+export interface CreateReminderDefinitionInput {
+  title: string;
+  recurrenceType: ReminderRecurrenceType;
+  anchorDate: string;
+  targetUserIds: string[];
+  description?: string;
+  leadDays?: number;
+}
+
+export interface NewJobEntryInput {
+  customerName: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  customerAddress?: string;
+  customerGSTIN?: string;
+  customerSource?: string;
+  vehicleNumber: string;
+  vehicleMake?: string;
+  vehicleModel?: string;
+  vehicleYear?: string;
+  vehicleFuel?: string;
+  vehicleColour?: string;
+  reasonForVisit: string;
+  handledById?: string;
+  noVehicle?: boolean;
+  customerRole?: 'OWNER' | 'DRIVER';
+  ownerName?: string;
+  ownerPhone?: string;
+  visitDate?: string;
+  estimatedTotal?: number;
+}
+
+export interface NewJobEntryResult {
+  jobCard: { id: string; jobNumber: string; customerId: string };
+  invoice: { id: string; invoiceNumber: string };
+}
+
+export interface JobLookupCustomer {
+  id: string;
+  name: string;
+  phone: string;
+  vehicles: CustomerVehicleSummary[];
+}
+
+export interface TeamChatMember {
+  id: string;
+  userId: string;
+  lastReadAt: string | null;
+  user: { id: string; name: string; phone: string | null; designation: string | null };
+}
+
+// Server soft-deletes (deleted:true, content/mediaUrl/mediaType scrubbed to
+// null on every read path — never rely on client-side hiding, the server
+// has already blanked it). edited/editedAt set on a successful PATCH.
+// replyTo is a server-built quote, populated automatically whenever
+// replyToId is set — no separate fetch needed. pinnedAt is shared (message
+// pins are chat-wide, max 3, unlike a chat's own per-user pinnedAt below).
+export interface TeamChatMessageQuote {
+  id: string;
+  senderId: string;
+  content: string | null;
+  mediaType: string | null;
+  deleted: boolean;
+  sender: { id: string; name: string };
+}
+
+export interface TeamChatMessage {
+  id: string;
+  chatId: string;
+  senderId: string;
+  content: string | null;
+  mediaUrl: string | null;
+  mediaType: string | null;
+  sentAt: string;
+  sender: { id: string; name: string };
+  deleted?: boolean;
+  edited?: boolean;
+  editedAt?: string | null;
+  replyToId?: string | null;
+  replyTo?: TeamChatMessageQuote | null;
+  pinnedAt?: string | null;
+  forwarded?: boolean;
+}
+
+export interface TeamChat {
+  id: string;
+  isGroup: boolean;
+  name: string | null;
+  lastMsgAt: string | null;
+  members: TeamChatMember[];
+  messages: TeamChatMessage[];
+  unreadCount: number;
+  adminId?: string | null;
+  // Per-viewer — this caller's own pin of the chat, not shared. Stripped
+  // from the raw member rows server-side and merged back in as
+  // viewer-specific state on each returned chat.
+  pinnedAt?: string | null;
+}
+
+export interface TeamChatEmployee {
+  id: string;
+  name: string;
+  phone: string | null;
+  designation: string | null;
+  role: string;
+  nickname: string | null;
+}
+
+export type OvertimeStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface OvertimeRequest {
+  id: string;
+  date: string;
+  requestedHours: number;
+  actualHours: number | null;
+  reason: string;
+  isUrgent: boolean;
+  status: OvertimeStatus;
+  rejectionReason: string | null;
+  overtimePay: number | null;
+  createdAt: string;
+}
+
+export type JobStatus = 'NEW_ENQUIRY' | 'QUOTED' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'FOLLOW_UP_NEEDED';
+
+// The legacy "Job Tracker" pipeline (enquiries/quotes) — distinct from the
+// JobCard model behind the Customers & Jobs tab.
+export interface TrackerJob {
+  id: string;
+  vehicleBrand: string;
+  vehicleModel: string | null;
+  vehicleNumber: string;
+  serviceTypes: string[];
+  quotedAmount: number | null;
+  finalAmount: number | null;
+  status: JobStatus;
+  priority: 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+  createdAt: string;
+  customer: { id: string; name: string; phone: string };
+  assignedTo: { id: string; name: string };
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export type InvoiceStatus = 'DRAFT' | 'ISSUED' | 'PAID' | 'PARTIAL' | 'CANCELLED' | 'OVERDUE';
+
+export interface InvoiceListItem {
+  id: string;
+  invoiceNumber: string;
+  customerName: string;
+  customerPhone: string | null;
+  vehicleNumber: string | null;
+  grandTotal: number;
+  paidAmount: number;
+  balanceDue: number;
+  status: InvoiceStatus;
+  createdAt: string;
+}
+
+export interface InvoiceDetail extends InvoiceListItem {
+  subtotal: number;
+  cgst: number;
+  sgst: number;
+  paymentMode: string | null;
+  paymentRef: string | null;
+  notes: string | null;
+  whatsappSent?: boolean;
+  customerEmail?: string | null;
+  emailSent?: boolean;
+  waybillNo?: string | null;
+}
+
+// POST /invoices, backend/src/routes/invoiceRoutes.ts — the server computes
+// GST/totals from these raw line items via calculateAmounts() when
+// manualAmounts is omitted, so the client never needs to replicate that
+// calc. Built 2026-09-23: job-card linking and the ADVANCE invoice type
+// (a separate, line-item-less shape) are deliberately out of scope for
+// this pass, same call already made for the quotations create form.
+export interface InvoiceLineItemInput {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  discountAmount?: number;
+  discountMode?: 'PERCENT' | 'FIXED';
+}
+
+export interface CreateInvoiceInput {
+  customerName: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  customerAddress?: string;
+  customerGSTIN?: string;
+  vehicleNumber?: string;
+  vehicleBrand?: string;
+  vehicleModel?: string;
+  vehicleYear?: string;
+  vehicleColour?: string;
+  lineItems?: InvoiceLineItemInput[];
+  gstRate?: number;
+  overallDiscountAmount?: number;
+  overallDiscountMode?: 'PERCENT' | 'FIXED';
+  notes?: string;
+  // "Create invoice from job" — jobId links the invoice to a job card
+  // (backend/src/routes/invoiceRoutes.ts POST /, re-verified 2026-09-24).
+  // FULL requires the job card's list to already have at least one line
+  // item, server-enforced; ADVANCE needs `amount` instead of lineItems.
+  jobId?: string;
+  type?: 'FULL' | 'ADVANCE';
+  amount?: number;
+}
+
+// ── Phase 3 ──────────────────────────────────────────────────────────────────
+
+export interface ERPSupplier {
+  id: string;
+  name: string;
+  contact: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+}
+
+// CRM (backend/src/routes/crm.ts) returns raw JSON, not ApiEnvelope-wrapped.
+export interface CrmCustomer {
+  id: string;
+  name: string;
+  phone: string;
+  createdAt: string;
+  vehicles?: { id: string; vehicleNumber: string; make: string | null; model: string | null }[];
+  _count?: { crmInvoices: number };
+}
+
+export interface CrmCustomersResponse {
+  customers: CrmCustomer[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export type PipelineStatus =
+  | 'NEW_ENQUIRY' | 'QUOTED' | 'CONFIRMED' | 'IN_PROGRESS'
+  | 'COMPLETED' | 'CANCELLED' | 'FOLLOW_UP_NEEDED';
+
+export interface PipelineJob {
+  id: string;
+  customerName: string;
+  customerPhone: string;
+  vehicleBrand: string | null;
+  vehicleModel: string | null;
+  vehicleNumber: string | null;
+  serviceTypes: string[];
+  quotedAmount: number | null;
+  finalAmount: number | null;
+  paymentStatus: string;
+  priority: string;
+  assignedTo: { id: string; name: string; username: string } | null;
+  followUpDate: string | null;
+  updatedAt: string;
+}
+
+export type PipelineResponse = Record<PipelineStatus, PipelineJob[]>;
+
+export interface CallLogEntry {
+  id: string;
+  direction: 'INBOUND' | 'OUTBOUND';
+  status: string;
+  startedAt: string;
+  durationSeconds: number | null;
+  agentName: string | null;
+  customerName: string | null;
+  counterpartyDisplay: string | null;
+  hasRecording: boolean;
+  linkStatus: string;
+  // Non-null only for OWNER/STORE_MANAGER (the only roles with a global
+  // calls:recording.listen grant) AND when hasRecording is true — the id
+  // needed to fetch the recording detail (GET /call-recordings/:id). SALES
+  // never gets one, even for their own calls (backend/src/routes/calls.ts).
+  callRecordingId: string | null;
+  recordingProcessing: boolean;
+}
+
+export interface CallRecordingSummary {
+  id: string;
+  createdAt: string;
+  durationSeconds: number | null;
+  transcriptAvailable: boolean;
+}
+
+export type TranscriptStatus = 'PENDING' | 'PROCESSING' | 'DONE' | 'FAILED' | 'TOO_SHORT' | 'ECHO_REJECTED';
+
+export interface CallRecordingDetail {
+  id: string;
+  audioUrl: string;
+  durationSecs: number | null;
+  callTimestamp: string;
+  transcriptText: string | null;
+  transcriptStatus: TranscriptStatus;
+}
+
+// FinancialOverview and BankAccount are already defined further below
+// (pre-existing, unused plumbing from an earlier phase that already matches
+// the real backend shapes — reused as-is here rather than redefined).
+
+export interface AccountingLedger {
+  id: string;
+  name: string;
+  type: string;
+  gstin: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  isActive: boolean;
+  partyType: 'SUPPLIER' | 'TRANSPORTER' | null;
+  balance?: string; // server returns balance.toFixed(2) as a string, not a number
+}
+
+export interface PurchaseVoucherItem {
+  id: string;
+  description: string;
+  quantity: string;
+  rate: string;
+  amount: string;
+}
+
+export interface DebitNote {
+  id: string;
+  voucherNumber: string;
+  voucherDate: string;
+  totalAmount: string;
+  status: string;
+  narration: string | null;
+  purchaseVoucherId: string;
+  purchaseVoucher?: { id: string; voucherNumber: string };
+  replacementPurchaseVoucherId: string | null;
+  replacementPurchaseVoucher: { id: string; voucherNumber: string } | null;
+  items: { id: string; purchaseVoucherItemId: string; returnedQuantity: string; amount: string }[];
+}
+
+export interface PurchaseVoucher {
+  id: string;
+  voucherNumber: string;
+  voucherDate: string;
+  narration: string | null;
+  transporterName: string | null;
+  totalAmount: number;
+  status: string;
+  outstanding: string;
+  purchaseOrder: { id: string; status: string; totalAmount: number; supplierId: string } | null;
+  allocations: { paymentVoucher: { voucherNumber: string } }[];
+  items: PurchaseVoucherItem[];
+  debitNotesAsSource: DebitNote[];
+  debitNotesAsReplacement: DebitNote[];
+}
+
+export interface PaymentVoucher {
+  id: string;
+  voucherNumber: string;
+  voucherDate: string;
+  voucherType: 'PAYMENT' | 'RECEIPT';
+  totalAmount: number;
+  narration: string | null;
+  status: string;
+  available: string;
+}
+
+export interface LedgerDetail {
+  ledger: AccountingLedger;
+  balance: string;
+  purchaseVouchers: PurchaseVoucher[];
+  paymentVouchers: PaymentVoucher[];
+}
+
+export interface CreateLedgerInput {
+  name: string;
+  gstin?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  partyType?: 'SUPPLIER' | 'TRANSPORTER';
+}
+
+export interface CreatePaymentVoucherInput {
+  ledgerId: string;
+  voucherType: 'PAYMENT' | 'RECEIPT';
+  voucherNumber: string;
+  voucherDate: string;
+  totalAmount: number;
+  narration?: string;
+  allocations?: { purchaseVoucherId: string; amount: number }[];
+}
+
+export interface AccountingVoucherLineInput {
+  description: string;
+  quantity?: number;
+  rate: number;
+  amount: number;
+}
+
+export interface CreatePurchaseVoucherInput {
+  ledgerId: string;
+  voucherNumber: string;
+  voucherDate: string;
+  narration?: string;
+  transporterName?: string;
+  purchaseOrderId?: string;
+  items: AccountingVoucherLineInput[];
+}
+
+export interface UpdateLedgerInput {
+  name: string;
+  gstin?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  partyType: 'SUPPLIER' | 'TRANSPORTER' | null;
+}
+
+export interface PostDebitNoteInput {
+  purchaseVoucherId: string;
+  replacementPurchaseVoucherId?: string;
+  voucherNumber: string;
+  voucherDate: string;
+  narration?: string;
+  items: { purchaseVoucherItemId: string; returnedQuantity: number; amount: number }[];
+}
+
+export interface PostPaidTransporterVoucherInput {
+  ledgerId: string;
+  purchaseVoucherNumber: string;
+  paymentVoucherNumber: string;
+  voucherDate: string;
+  narration?: string;
+  transporterName?: string;
+  purchaseOrderId?: string;
+  items: AccountingVoucherLineInput[];
+}
+
+export const EXPENSE_CATEGORIES = ['RAPIDO', 'ZEPTO', 'FUEL', 'FOOD', 'SUPPLIES', 'REPAIRS', 'TRAVEL', 'MISC'] as const;
+export type ExpenseCategory = (typeof EXPENSE_CATEGORIES)[number];
+export type ExpenseStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+// The resolved shape GET /auth/me already computes server-side (backend/src/
+// routes/auth.ts) via mergePermissions/getTabAccess (backend/src/lib/
+// defaultPermissions.ts) — role defaults folded with any per-employee
+// EmployeePermissions override. See MOBILE_PERMISSIONS_PATTERN.md for what
+// this does and does NOT cover.
+export interface ResolvedPermissions {
+  tabs: Record<string, boolean>;
+  tabModes: Record<string, string>;
+  hasLegalAccess: boolean;
+}
+
+export interface ExpenseAttachment {
+  id: string;
+  filename: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedBy: { id: string; name: string };
+  createdAt: string;
+}
+
+export interface ExpenseReply {
+  id: string;
+  message: string;
+  author: { id: string; name: string };
+  createdAt: string;
+}
+
+export interface Expense {
+  id: string;
+  amount: number;
+  category: ExpenseCategory;
+  description: string;
+  date: string | null;
+  createdAt: string;
+  status: ExpenseStatus;
+  user?: { id: string; name: string; role: string };
+  attachments?: ExpenseAttachment[];
+  replies?: ExpenseReply[];
+  reviewNote?: string | null;
+  reviewedBy?: { id: string; name: string } | null;
+}
+
+export interface ExpenseListResponse {
+  expenses: Expense[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface ExpenseSummaryByCategory { category: string; amount: number }
+export interface ExpenseSummaryByPerson { id: string; name: string; total: number; count: number }
+export interface ExpenseSummaryByDay { day: string; amount: number }
+
+export interface ExpenseSummary {
+  total: number;
+  count: number;
+  byCategory: ExpenseSummaryByCategory[];
+  byPerson: ExpenseSummaryByPerson[];
+  byDay: ExpenseSummaryByDay[];
+}
+
+// Extract/bulk-import — added 2026-09-24, closing the gap flagged when
+// Expenses' core submit/approve flow was built earlier this pass. Neither
+// /extract nor /extract-statement ever persists anything — pure read, the
+// caller decides what (if anything) to submit with the result.
+export interface ExtractedReceiptFields {
+  amount: number | null;
+  date: string | null;
+}
+
+export interface ExtractedStatementTransaction {
+  date?: string;
+  amount: number;
+  category: ExpenseCategory | string;
+  description: string;
+  duplicateWarning?: boolean;
+}
+
+export interface ExtractedStatementResult {
+  transactions: ExtractedStatementTransaction[];
+  unparsedNote: string | null;
+  source: 'spreadsheet' | 'ai';
+}
+
+export type TimesheetStatus = 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'REJECTED';
+
+export interface TimesheetEntry {
+  id?: string;
+  task: string;
+  hours: number;
+  notes?: string;
+}
+
+export interface Timesheet {
+  id: string;
+  date: string;
+  entries: TimesheetEntry[];
+  totalHours: number;
+  status: TimesheetStatus;
+  notes: string | null;
+  // GET /timesheets/my-month (backend/src/routes/timesheets.ts, re-verified
+  // 2026-09-24) includes these same fields as TimesheetDetail below — the
+  // self-service view was only reading a subset. editableUntil/canEdit come
+  // from withEditability, which is where the SUBMITTED one-time 60-minute
+  // edit window (canEditSubmittedTimesheet) is actually computed — never
+  // re-derive that window client-side.
+  entryReplies?: TimesheetEntryReply[];
+  entryContacts?: TimesheetEntryContactLink[];
+  entryAttachments?: TimesheetEntryAttachment[];
+  editableUntil?: string | null;
+  canEdit?: boolean;
+}
+
+// ── Manager-side full timesheet detail (GET /timesheets/:id,
+// backend/src/routes/timesheets.ts) — the per-entry collaboration surface:
+// replies, attachments, and linked contacts, plus who each entry's already-
+// open follow-up task (if any) belongs to.
+export interface TimesheetEntryReply {
+  id: string;
+  entryId: string;
+  authorId: string;
+  message: string;
+  author: { id: string; name: string };
+  createdAt: string;
+}
+
+export interface TimesheetEntryAttachment {
+  id: string;
+  entryId: string;
+  filename: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedBy: { id: string; name: string };
+  createdAt: string;
+}
+
+export interface TimesheetEntryContactLink {
+  id: string;
+  entryId: string;
+  reason: string | null;
+  linkedBy: { id: string; name: string };
+  contact: Contact;
+  createdAt: string;
+}
+
+export interface TimesheetFollowUpTask {
+  id: string;
+  sourceEntryId: string | null;
+  status: string;
+  title: string;
+}
+
+export interface TimesheetDetail {
+  id: string;
+  date: string;
+  entries: TimesheetEntry[];
+  totalHours: number;
+  status: TimesheetStatus;
+  notes: string | null;
+  user: { id: string; name: string; username: string; designation: string | null; role: string };
+  approvedBy: { id: string; name: string } | null;
+  entryReplies: TimesheetEntryReply[];
+  entryAttachments: TimesheetEntryAttachment[];
+  entryContacts: TimesheetEntryContactLink[];
+  followUpTasks: TimesheetFollowUpTask[];
+  canEdit: boolean;
+}
+
+export interface CallCapabilities {
+  callingEnabled: boolean;
+  canInitiate: boolean;
+  canListenRecordings: boolean;
+  canDownloadRecordings: boolean;
+  canViewAllCalls: boolean;
+}
+
+export interface CallInitiateResult {
+  ok: boolean;
+  callSid?: string;
+}
+
+export interface PayrollResult {
+  userId?: string;
+  userName?: string;
+  designation?: string | null;
+  monthlySalary: number;
+  presentDays: number;
+  absentDays: number;
+  halfDays: number;
+  leaveDays: number;
+  earnedSalary: number;
+  absentDeduction: number;
+  halfDayDeduction: number;
+  lateDeduction: number;
+  lateCount: number;
+  carriedLates: number;
+  lateFullDays: number;
+  lateHalfDays: number;
+  lateCarryForward: number;
+  carriedLateDeduction: number;
+  totalOvertimePay: number;
+  totalLoanDeduction: number;
+  // Per-advance breakdown of totalLoanDeduction above — already computed and
+  // returned by GET /payroll/calculate (backend/src/services/payrollService.ts)
+  // but never surfaced in any UI before 2026-09-21; only the lump total was
+  // shown, with no way to tell which advance it came from.
+  loanDeductions: { loanId: string; amount: number; remainingAfter: number }[];
+  totalDeductions: number;
+  netSalary: number;
+  finalSalaryOverride: number | null;
+  cycleStart: string;
+  cycleEnd: string;
+  dailyRate: number;
+  payableDays: number;
+  // Only ever present (and false) on the unconfigured-employee stub row
+  // calculateAllPayroll synthesizes (backend/src/services/payrollService.ts)
+  // — absent on every real calculated row, so treat `!== false` as configured.
+  isConfigured?: boolean;
+  attendanceDetails?: PayrollAttendanceDetail[];
+}
+
+export interface PayrollAttendanceDetail {
+  date: string;
+  status: 'PRESENT' | 'LATE' | 'HALF_DAY' | 'ABSENT' | 'LEAVE' | 'WEEKEND';
+  clockIn: string | null;
+  clockOut: string | null;
+  isOverridden: boolean;
+  overrideReason: string | null;
+  overriddenByName: string | null;
+}
+
+export interface LateRecord {
+  id: string;
+  date: string;
+  /** WARNING (lates 1-2) | HALF_DAY (3-4) | FULL_DAY (5-7) | ONE_HALF_DAY (default) — see payrollService.calculateLatePenalty. */
+  penaltyApplied: string;
+}
+
+export type LoanStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
+
+export type RepaymentMode = 'MONTHLY_N' | 'LUMP_NEXT_MONTH' | 'TBD' | 'CUSTOM';
+
+export interface LoanScheduleEntry {
+  id: string;
+  month: number;
+  year: number;
+  plannedAmount: number;
+}
+
+export interface LoanOrAdvance {
+  id: string;
+  amount: number;
+  remainingAmount: number;
+  monthlyDeductionPercent: number;
+  monthlyDeductionAmount: number;
+  repaymentMode: RepaymentMode | null;
+  tenureMonths: number | null;
+  status: LoanStatus;
+  notes: string | null;
+  rejectionReason: string | null;
+  requestedAt: string;
+  approvedAt: string | null;
+  // The repayment plan for MONTHLY_N/CUSTOM loans — what's due which month.
+  // Added 2026-09-21: this model already existed (used internally by payroll
+  // to compute deductions) but was never read back out to the employee.
+  scheduleEntries: LoanScheduleEntry[];
+  // The loan's own CREATE history row, if any — self-requested loans
+  // (POST /loans) never write one; only admin-created ones (POST /loans/
+  // admin, e.g. a cashier recording an advance on the employee's behalf) do.
+  // So `history.length > 0` alone means "someone else created this for me,"
+  // no userId comparison needed. Empty array, never undefined/null, when
+  // there's no such row.
+  history: { changedBy: { id: string; name: string } }[];
+}
+
+export interface FullProfile {
+  id: string;
+  name: string;
+  username: string;
+  employeeId: string | null;
+  role: string;
+  phone: string | null;
+  designation: string | null;
+  monthlySalary: number | null;
+  joiningDate: string | null;
+  email: string | null;
+  personalEmail: string | null;
+  personalPhone: string | null;
+  branch: string | null;
+  isActive: boolean;
+  customClockIn: string | null;
+  customClockOut: string | null;
+  defaultLeaves: number | null;
+  workingDaysPerMonth: number | null;
+}
+
+export type IdentityDocType =
+  | 'PAN_CARD' | 'AADHAAR_CARD' | 'OTHER'
+  | 'PASSPORT' | 'DRIVING_LICENCE' | 'VOTER_ID' | 'LAST_SALARY_SLIP' | 'BANK_ACCOUNT' | 'CV'
+  | 'EDUCATION_CERTIFICATE' | 'EXPERIENCE_LETTER';
+
+// Matches Prisma's LeaveType enum exactly (backend/prisma/schema.prisma).
+export type LeaveType = 'SICK' | 'PERSONAL' | 'EMERGENCY';
+export type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+
+export interface LeaveRequest {
+  id: string;
+  userId: string;
+  leaveType: LeaveType;
+  startDate: string;
+  endDate: string;
+  reason: string;
+  isHalfDay: boolean;
+  status: LeaveStatus;
+  rejectionReason: string | null;
+  createdAt: string;
+  respondedAt: string | null;
+  user: { id: string; name: string; username: string; role?: string };
+  approvedBy: { id: string; name: string; username: string } | null;
+}
+
+export interface IdentityDocument {
+  id: string;
+  type: IdentityDocType;
+  label: string | null;
+  filename: string | null;
+  mimeType: string | null;
+  fileSize: number | null;
+  createdAt: string;
+  hasValue: boolean;
+  maskedValue?: string | null;
+}
+
+// ── Desk-only "safe" batch ──────────────────────────────────────────────────
+
+export type ItemStatus = 'ACTIVE' | 'OUT_OF_STOCK' | 'DISCONTINUED';
+
+export interface InventoryItemRow {
+  id: string;
+  product: string;
+  category: string;
+  unit: string;
+  status: ItemStatus;
+  totalStock: number;
+  sellingPrice: number | null;
+  imageUrls?: string[];
+  lastVerifiedAt?: string | null;
+  lastVerifiedCount?: number | null;
+  storeLocation?: string | null;
+}
+
+// POST/PATCH /inventory-items, POST /inventory-items/:id/receipts, POST
+// /inventory-items/items-out — write actions added 2026-09-23 (scope
+// update: full dashboard parity). Deliberately scoped to the basic
+// InventoryItem fields; the receipt-level cost/dealer/logistics/GST/date
+// fields PATCH /:id also accepts are out of scope for this pass (the same
+// "batch management" concern is covered instead by the simpler POST
+// /:id/receipts create-a-new-batch form below). Barcode scanning stays out
+// of scope — no camera/barcode package installed, per the existing note
+// on this screen.
+export interface InventoryItemInput {
+  product: string;
+  category: string;
+  sellingPrice?: number;
+  incentiveValue?: number;
+  unit?: string;
+  compatibility?: string;
+  warranty?: string;
+  notes?: string;
+  status?: ItemStatus;
+  storeLocation?: string | null;
+}
+
+export interface InventoryReceiptInput {
+  quantityReceived: number;
+  costPerUnit?: number;
+  sellerName?: string;
+  notes?: string;
+  barcode?: string;
+  billUrl?: string;
+}
+
+// GET /inventory-items/:id (backend/src/routes/inventory_items_route.ts)
+// includes the raw StockReceipt rows for that item — this is the shape of
+// each one, verified against the schema + PATCH /receipts/:id handler.
+export interface StockReceipt {
+  id: string;
+  itemId: string;
+  barcode?: string | null;
+  remainingQty?: number | null;
+  quantityReceived: number;
+  sellerName?: string | null;
+  sellerContact?: string | null;
+  sellerCity?: string | null;
+  orderPlacedTo?: string | null;
+  logisticsPartner?: string | null;
+  logisticsCharge?: number | null;
+  logisticsPartner2?: string | null;
+  logisticsCharge2?: number | null;
+  costPerUnit?: number | null;
+  dealerPrice?: number | null;
+  mrpAtReceipt?: number | null;
+  gstPercent?: number | null;
+  paymentTerms?: string | null;
+  billUrl?: string | null;
+  orderDate?: string | null;
+  receiptDate?: string | null;
+  expiryDate?: string | null;
+  notes?: string | null;
+  storeLocation?: string | null;
+  createdAt: string;
+}
+
+// GET /inventory-items/:id returns the raw InventoryItem row (no computed
+// totalStock/effectiveStatus — those are only computed by the LIST route),
+// plus receipts. Used only to pull the receipts array; item fields keep
+// coming from the already-fetched list row (InventoryItemRow).
+export interface InventoryItemDetail {
+  id: string;
+  receipts: StockReceipt[];
+}
+
+// GET /inventory-items/incoming — draft receipts (receiptDate is null,
+// i.e. never confirmed as arrived). 100% new — no mobile plumbing existed
+// for this at all before this pass.
+export interface DraftReceipt extends StockReceipt {
+  estimatedArrivalDate?: string | null;
+  item?: { product: string; category: string; unit: string } | null;
+}
+
+export interface ConfirmArrivalInput {
+  quantityReceived?: number;
+  receiptDate?: string;
+  notes?: string;
+}
+
+// POST /api/v1/inventory/stock-receipts/:id/reconcile — a DIFFERENT
+// backend route base (/inventory, not /inventory-items) and a wider role
+// gate (adds TECH_TEAM) than the rest of this screen's write actions.
+// Distinct from the simpler item-level reconcileInventoryItem() below,
+// which adjusts the most recent batches automatically with no reason.
+export type ReconcileReason = 'DAMAGED' | 'THEFT_LOSS' | 'COUNTING_ERROR' | 'FOUND_EXTRA' | 'OTHER';
+
+export interface ReconciliationRecord {
+  id: string;
+  stockReceiptId: string;
+  previousQty: number;
+  newQty: number;
+  difference: number;
+  reason: string;
+  notes?: string | null;
+  reconciledAt: string;
+  user?: { name: string };
+}
+
+// PATCH /inventory-items/receipts/:receiptId (requireInventoryWrite) —
+// same route EditBatchModal and the inline store-location edit both use.
+export interface UpdateReceiptInput {
+  sellerName?: string;
+  sellerContact?: string;
+  sellerCity?: string;
+  orderPlacedTo?: string;
+  logisticsPartner?: string;
+  logisticsCharge?: number;
+  logisticsPartner2?: string;
+  logisticsCharge2?: number;
+  paymentTerms?: string;
+  eta?: string;
+  quantityReceived?: number;
+  costPerUnit?: number;
+  dealerPrice?: number;
+  mrpAtReceipt?: number;
+  gstPercent?: number;
+  billUrl?: string;
+  orderDate?: string;
+  receiptDate?: string;
+  expiryDate?: string;
+  notes?: string;
+  storeLocation?: string | null;
+}
+
+// POST /inventory-items/items-out (backend/src/routes/inventory_items_route.ts)
+// — barcode is preferred (a locked, race-safe deduction against a specific
+// receipt); itemName is a fallback FIFO-deduction path across that item's
+// receipts. category is only used by the dashboard to filter its item-name
+// datalist, not sent meaningfully server-side beyond that.
+export interface ItemOutInput {
+  barcode?: string;
+  itemName?: string;
+  category?: string;
+  quantity: number;
+  unit?: string;
+  reason?: string;
+  notes?: string;
+  date?: string;
+}
+
+// status: DEDUCTED (normal path) | OUT_OF_STOCK_AT_TIME | ITEM_NOT_IN_INVENTORY
+// — set server-side depending on what the deduction attempt found.
+export interface ItemOutLog {
+  id: string;
+  itemId?: string | null;
+  itemName: string;
+  barcode?: string | null;
+  quantity: number;
+  unit: string | null;
+  reason: string | null;
+  notes?: string | null;
+  status: string;
+  loggedById?: string;
+  date: string;
+  item?: { product: string; category: string } | null;
+}
+
+export type SOStatus = 'DRAFT' | 'CONFIRMED' | 'SHIPPED' | 'CANCELLED';
+
+export interface SalesOrderLine {
+  id: string;
+  qty: number;
+  unitPrice: number;
+  item: { id: string; name: string };
+}
+
+export interface SalesOrder {
+  id: string;
+  customerName: string;
+  customerEmail: string | null;
+  status: SOStatus;
+  totalAmount: number;
+  createdAt: string;
+  lines: SalesOrderLine[];
+}
+
+export type POStatus = 'DRAFT' | 'SENT' | 'RECEIVED' | 'CANCELLED';
+
+export interface PurchaseOrderLine {
+  id: string;
+  qty: number;
+  unitCost: number;
+  item: { id: string; name: string };
+}
+
+export interface PurchaseOrder {
+  id: string;
+  status: POStatus;
+  totalAmount: number;
+  createdAt: string;
+  supplier: { id: string; name: string };
+  lines: PurchaseOrderLine[];
+}
+
+export type SimStatus = 'ACTIVE' | 'INACTIVE' | 'LOST' | 'EXPIRED' | 'SPARE';
+
+export interface SimCard {
+  id: number;
+  simNumber: string;
+  mobileNumber: string | null;
+  operator: string;
+  dataPlan: string | null;
+  monthlyRent: number | null;
+  assignedTo: string | null;
+  purpose: string | null;
+  deviceName: string | null;
+  status: SimStatus;
+  planExpiry: string | null;
+  notes: string | null;
+}
+
+export interface CreateSimInput {
+  simNumber: string;
+  mobileNumber?: string;
+  operator: string;
+  dataPlan?: string;
+  monthlyRent?: number;
+  planExpiry?: string;
+  assignedTo?: string;
+  purpose?: string;
+  deviceName?: string;
+  status?: SimStatus;
+  notes?: string;
+}
+
+export interface CompanySettings {
+  id: string | null;
+  gstNo: string;
+  name: string;
+  address: string;
+  phone: string;
+  email: string;
+  logoUrl: string | null;
+}
+
+export interface AllTimesheetRow {
+  id: string;
+  date: string;
+  totalHours: number;
+  status: TimesheetStatus;
+  user: { id: string; name: string; designation: string | null };
+}
+
+export interface AllTimesheetsResponse {
+  timesheets: AllTimesheetRow[];
+  total: number;
+  page: number;
+  totalPages: number;
+}
+
+export interface PendingOvertimeRequest {
+  id: string;
+  date: string;
+  requestedHours: number;
+  reason: string;
+  isUrgent: boolean;
+  user: { id: string; name: string; role: string; designation: string | null };
+  // Fields present on GET /overtime (the all-requests fetch) but not on
+  // GET /overtime/pending — optional since the pending-only fetch's rows
+  // won't have them. Added 2026-09-24 for the Approved/Rejected tabs.
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  rejectionReason?: string | null;
+  actualHours?: number | null;
+  overtimePay?: number | null;
+  approvedBy?: { id: string; name: string } | null;
+  createdAt: string;
+  approvedAt?: string | null;
+}
+
+export interface AgentStatus {
+  agentName: string;
+  isActive: boolean;
+  lastActivity: string | null;
+  todayCount: number;
+}
+
+export interface AgentActivity {
+  id: string;
+  agentName: string;
+  action: string;
+  createdAt: string;
+}
+
+export interface RoleAppPolicy {
+  id: string;
+  role: string;
+  appName: string;
+  packageName: string | null;
+  isAllowed: boolean;
+  deviceType: DeviceType;
+}
+
+export interface DeviceLocationLog {
+  id: string;
+  latitude: number;
+  longitude: number;
+  createdAt: string;
+}
+
+export interface DeviceAppUsage {
+  id: string;
+  appName: string;
+  packageName: string | null;
+  usageMinutes: number;
+  date: string;
+}
+
+export interface DeviceDetail extends DeviceRow {
+  deviceModel: string | null;
+  osVersion: string | null;
+  serialNumber: string | null;
+  macAddress: string | null;
+  isCompanyOwned: boolean;
+  registeredAt: string;
+}
+
+export interface SimStats {
+  total: number;
+  active: number;
+  inactive: number;
+  lost: number;
+  expired: number;
+  spare: number;
+  expiringSoon: number;
+}
+
+// ── Crown jewels — Employees / Configure / MDM ──────────────────────────────
+// Deliberately no salary fields here: the mobile Employees directory never
+// requests or renders monthlySalary/salaryType, even for authorized roles —
+// that data belongs to Payroll/My Salary, not the general directory.
+
+export interface EmployeeListItem {
+  id: string;
+  name: string;
+  username: string;
+  employeeId: string | null;
+  role: string;
+  phone: string | null;
+  designation: string | null;
+  isActive: boolean;
+  // Always present in GET /employees regardless of canEditSalary — only
+  // monthlySalary/salaryType are stripped for non-salary-authorized callers.
+  customClockIn: string | null;
+  customClockOut: string | null;
+  defaultLeaves: number | null;
+  workingDaysPerMonth: number | null;
+}
+
+// The actual GET/PUT /staff-config/:userId response shape (the ShiftConfig
+// Prisma model's arrival-timing cutoffs) — distinct from the attendance
+// defaults (customClockIn/Out, workingDaysPerMonth, defaultLeaves) which
+// live on the User model and are read/written through EmployeeListItem
+// above and updateStaffConfigAttendanceDefaults below, NOT this type. A
+// prior version of this file conflated the two under one `ShiftConfig`
+// name and sent the wrong fields to this endpoint — see MOBILE_PERMISSIONS_PATTERN
+// note in staff-config.tsx for the fix.
+export interface ShiftTimingConfig {
+  userId: string;
+  onTimeBeforeH: number;
+  onTimeBeforeM: number;
+  lateBeforeH: number;
+  lateBeforeM: number;
+  halfDayBeforeH: number;
+  halfDayBeforeM: number;
+  minFullDayMins: number;
+}
+
+export type ContactType = 'CUSTOMER' | 'VENDOR_SERVICE_PROVIDER' | 'STAFF' | 'OTHER';
+
+export interface Contact {
+  id: string;
+  phone: string;
+  contactType: ContactType;
+  contactTypeOther: string | null;
+  name: string | null;
+  reason: string | null;
+  addedBy: { id: string; name: string } | null;
+  lastEditedBy?: { id: string; name: string } | null;
+  createdAt: string;
+}
+
+// GET /contacts/:id (backend/src/routes/contacts.ts, re-verified 2026-09-24)
+// joins TimesheetEntryContact rows for this contact against their parent
+// timesheet's entries — every timesheet entry this contact was ever linked
+// to, across every employee.
+export interface ContactLink {
+  id: string;
+  entryId: string;
+  reason: string | null;
+  createdAt: string;
+  linkedBy: { id: string; name: string };
+  timesheetId: string;
+  timesheetDate: string;
+  employee: { id: string; name: string };
+  entryTask: string | null;
+}
+
+export interface ContactDetail extends Contact {
+  links: ContactLink[];
+}
+
+export interface EmployeeDetail {
+  id: string;
+  name: string;
+  username: string;
+  phone: string | null;
+  designation: string | null;
+  isActive: boolean;
+  role: string;
+  createdAt: string;
+}
+
+export const MODE_TABS = [
+  'customers_jobs',
+  'invoices',
+  'employees',
+  'attendance',
+  'payroll',
+  'financial',
+  'inventory',
+  'expenses',
+] as const;
+export type ModeTab = (typeof MODE_TABS)[number];
+
+export const TAB_MODES: Record<ModeTab, readonly string[]> = {
+  customers_jobs: ['view_only', 'sales_mode', 'full_access'],
+  invoices: ['view_only', 'create_collect', 'full_access'],
+  employees: ['view_only', 'hr_edit', 'full_access'],
+  attendance: ['own_only', 'full_access'],
+  payroll: ['view_only', 'full_access'],
+  financial: ['view_only', 'full_access'],
+  inventory: ['view_only', 'full_access'],
+  expenses: ['add', 'verify', 'both'],
+};
+
+export const TAB_LABELS: Record<ModeTab, string> = {
+  customers_jobs: 'Customers & Jobs',
+  invoices: 'Invoices',
+  employees: 'Employees',
+  attendance: 'Attendance',
+  payroll: 'Payroll',
+  financial: 'Financial',
+  inventory: 'Inventory',
+  expenses: 'Expenses',
+};
+
+export interface TabAccess {
+  enabled: boolean;
+  mode: string;
+}
+
+// GET /permissions/tabs/registry — the same TAB_REGISTRY backend/src/lib/
+// tabRegistry.ts already uses to gate every route; mirrored here so the
+// mobile Configure screen (built 2026-09-23) lists exactly the tabs and
+// mode options the backend actually enforces, not a hand-maintained copy.
+export interface TabModeConfig {
+  options: readonly string[];
+  roleDefaults: Partial<Record<string, string>>;
+}
+
+export interface TabDef {
+  key: string;
+  label: string;
+  group: 'general' | 'hr' | 'finance' | 'operations' | 'devices';
+  route?: string;
+  parent?: string;
+  roleDefaults: Record<string, boolean>;
+  mode?: TabModeConfig;
+}
+
+export interface EmployeePermissions {
+  employeeId: string;
+  name: string;
+  role: string;
+  permissions: Record<string, boolean | TabAccess>;
+  hasOverrides: boolean;
+  overrides: Record<string, boolean | TabAccess> | null;
+}
+
+export type DeviceType = 'ANDROID' | 'IOS';
+
+export interface DeviceRow {
+  id: string;
+  deviceType: DeviceType;
+  deviceName: string;
+  deviceModel: string | null;
+  isOnline: boolean;
+  isLocked: boolean;
+  lastSeen: string | null;
+  user: { id: string; name: string; role: string } | null;
+  alerts: { id: string; alertType: string }[];
+}
+
+export interface DeviceAlert {
+  id: string;
+  deviceId: string;
+  alertType: string;
+  message: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+// ── Payroll — OWNER/STORE_MANAGER/CASHIER only, both server- and UI-gated ──
+
+export interface CompanyPayrollSummary {
+  month: number;
+  year: number;
+  summary: { totalPayroll: number; totalDeductions: number; employeeCount: number; avgAttendance: number };
+  employees: PayrollResult[];
+}
+
+export interface SalaryPaymentRecord {
+  id: string;
+  month: number;
+  amount: number;
+  mode: string | null;
+  paidAt: string;
+  paidBy: { name: string } | null;
+}
+
+// GET /payroll/disbursement/:year/:month — requirePayrollAccess
+// (SALARY_ADMIN_ROLES=[OWNER,STORE_MANAGER,CASHIER], backend/src/routes/
+// payroll.ts, verified 2026-09-19).
+export interface LoanScheduledPlanEntry {
+  loanId: string;
+  mode: 'MONTHLY_N' | 'LUMP_NEXT_MONTH' | 'TBD' | 'CUSTOM';
+  plannedAmount: number;
+  carriedAmount: number;
+  cappedAmount: number;
+  suggestedAmount?: number;
+}
+
+export interface PayrollDisbursementRow {
+  userId: string;
+  name: string;
+  role: string;
+  branch: string | null;
+  grossSalary: number;
+  loanDeduction: number;
+  loanOutstanding: number;
+  loanMonthlyDeduction: number;
+  advanceDeduction: number;
+  attendanceDeduction: number;
+  earnedSalary: number;
+  payableDays: number;
+  netPayable: number;
+  incentiveSuggestion: { thisMonth: number; runningTotal: number };
+  loanScheduledPlan?: LoanScheduledPlanEntry[];
+  unpaidIncentiveBalance?: number;
+  payment: {
+    id: string; amount: number; mode: string | null; paidAt: string;
+    grossSalary?: number; loanDeduction?: number; advanceDeduction?: number;
+    advanceSkipped?: boolean; attendanceDeduction?: number; totalDeductions?: number;
+    amountPaid?: number; paymentMode?: string; netPayable?: number;
+    note?: string; paidBy?: string;
+  } | null;
+}
+
+// ── ERP Finance — OWNER/STORE_MANAGER/ACCOUNTING only ──────────────────────
+
+export interface ErpFinanceKpis {
+  totalRevenue: number;
+  totalProfit: number;
+  totalOrders: number;
+  avgOrderValue: number;
+  profitPerOrder: number;
+  momGrowth: number;
+}
+
+export interface ErpFinanceChartPoint {
+  month: string;
+  yearMonth: string;
+  revenue: number;
+  profit: number;
+}
+
+export interface ErpFinanceOverview {
+  kpis: ErpFinanceKpis;
+  chart: ErpFinanceChartPoint[];
+}
+
+export interface ErpFinanceOrder {
+  isHistorical: boolean;
+  id: string;
+  date: string;
+  orderNumber: string | null;
+  customerName: string | null;
+  customerPhone: string | null;
+  vehicleModel: string | null;
+  amount: number | null;
+  qty: number | null;
+  unitPrice: number | null;
+  profit: number | null;
+  status: string | null;
+  paymentMethod: string | null;
+  soldBy: string | null;
+  lineItems: string[];
+  remarks: string | null;
+  isFormerEmployee?: boolean;
+  sourceNote?: string | null;
+}
+
+export interface ErpFinanceOrdersResponse {
+  orders: ErpFinanceOrder[];
+  total: number;
+  page: number;
+  limit: number;
+  liveCount: number;
+  historicalCount: number;
+}
+
+export interface ErpFinanceEmployeePerformance {
+  name: string;
+  designation?: string;
+  revenue: number;
+  profit: number;
+  orderCount: number;
+}
+
+export interface ErpFinanceService {
+  service: string;
+  revenue: number;
+  orderCount?: number;
+  volume?: number;
+}
+
+export interface ErpFinanceServices {
+  byRevenue: ErpFinanceService[];
+  byVolume: ErpFinanceService[];
+}
+
+export interface ErpFinanceCustomer {
+  name: string;
+  phone: string | null;
+  totalSpend: number;
+  orderCount: number;
+  lastVisit: string;
+}
+
+export interface ErpFinanceDailyPoint {
+  date: string;
+  revenue: number;
+  profit: number;
+  orders: number;
+  entries: number;
+}
+
+export interface ErpFinanceCustomers {
+  customers: ErpFinanceCustomer[];
+  walkInCount: number;
+}
+
+export interface ErpFinanceMonthlyEmployee {
+  name: string;
+  monthly: { month: string; revenue: number; profit: number; orders: number }[];
+  total: number;
+}
+
+export interface ErpFinanceMonthlyBreakdown {
+  employees: ErpFinanceMonthlyEmployee[];
+  months: string[];
+}
+
+// ── Staff Remarks — OWNER manages, everyone sees their own ────────────────
+
+export type RemarkRating = 'POSITIVE' | 'NEGATIVE';
+export type RemarkCategory =
+  | 'ATTENDANCE'
+  | 'PUNCTUALITY'
+  | 'SALES'
+  | 'CUSTOMER_HANDLING'
+  | 'BEHAVIOUR'
+  | 'TEAMWORK'
+  | 'INITIATIVE'
+  | 'OTHER';
+export type RemarkVisibility = 'VISIBLE_TO_EMPLOYEE' | 'PRIVATE';
+
+export interface RemarkReply {
+  id: string;
+  body: string;
+  createdAt: string;
+  author: { id: string; name: string; role: string };
+}
+
+export interface StaffRemark {
+  id: string;
+  employeeId: string;
+  authorId: string;
+  rating: RemarkRating;
+  category: RemarkCategory;
+  visibility: RemarkVisibility;
+  note: string;
+  createdAt: string;
+  employee: { id: string; name: string; role: string };
+  author: { id: string; name: string };
+  replies: RemarkReply[];
+}
+
+export interface MyRemark {
+  id: string;
+  rating: RemarkRating;
+  category: RemarkCategory;
+  note: string;
+  createdAt: string;
+  replies: RemarkReply[];
+}
+
+export interface CreateRemarkInput {
+  employeeId: string;
+  rating: RemarkRating;
+  category: RemarkCategory;
+  visibility: RemarkVisibility;
+  note: string;
+}
+
+// ── Owner Dashboard Overview — requireOwner only ──────────────────────────
+
+export interface DashboardOverview {
+  attendance: { present: number; absent: number; late: number; onTime: number; total: number };
+  jobs: { open: number; byEmployee: { id: string; name: string; role: string; count: number }[] };
+  revenue: { todayCollections: number; monthRevenue: number; outstanding: number; monthInvoiceCount: number };
+  recentInvoices: {
+    id: string;
+    invoiceNumber: string;
+    customerName: string;
+    grandTotal: number;
+    paidAmount: number;
+    balanceDue: number;
+    status: string;
+    createdAt: string;
+  }[];
+  recentJobs: {
+    id: string;
+    jobNumber: string;
+    vehicleNumber: string;
+    reasonForVisit: string;
+    status: string;
+    createdAt: string;
+  }[];
+}
+
+export interface OnLeaveEntry {
+  id: string;
+  user: { id: string; name: string; role: string };
+  leaveType: string;
+  startDate: string;
+  endDate: string;
+  isHalfDay: boolean;
+  isToday: boolean;
+}
+
+export interface DashboardRecentActivityItem {
+  id: string;
+  staffName: string;
+  staffInitials: string;
+  action: string;
+  customerName: string;
+  vehicleBrand: string | null;
+  vehicleNumber: string;
+  serviceTypes: string[];
+  status: string;
+  priority: string;
+  createdAt: string;
+}
+
+export interface DashboardTodaySnapshot {
+  jobsToday: {
+    id: string;
+    customerName: string;
+    vehicleBrand: string | null;
+    vehicleNumber: string;
+    serviceTypes: string[];
+    status: string;
+    priority: string;
+    assignedTo: string;
+    createdAt: string;
+  }[];
+  staffPresent: { name: string; clockIn?: string; isLate: boolean }[];
+  pendingFollowUps: {
+    id: string;
+    customerName: string;
+    vehicleBrand: string | null;
+    vehicleNumber: string;
+    serviceTypes: string[];
+    followUpDate?: string;
+    assignedTo: string;
+  }[];
+}
+
+export interface DashboardRevenueByEmployee {
+  name: string;
+  revenue: number;
+  jobs: number;
+}
+
+// ── Employee Agreements — OWNER/STORE_MANAGER/HR only ──────────────────────
+
+export type AgreementStatus = 'DRAFT' | 'AWAITING_EMPLOYEE' | 'SIGNED' | 'VOID';
+
+export interface AgreementListItem {
+  id: string;
+  userId: string;
+  employeeName: string;
+  role: string;
+  designation: string | null;
+  agreementType: string;
+  status: AgreementStatus;
+  ownerName: string | null;
+  ownerSignedAt: string | null;
+  employeeSignedName: string | null;
+  employeeSignedAt: string | null;
+  effectiveDate: string | null;
+  placeOfSigning: string | null;
+  pdfUrl: string | null;
+  createdAt: string;
+}
+
+export interface AgreementDetail extends AgreementListItem {
+  bodyJson: unknown;
+  ownerSignature: string | null;
+  employeeSignature: string | null;
+  employeeIp: string | null;
+  witnessName: string | null;
+  createdById: string;
+}
+
+export interface LoanRepayment {
+  id: string;
+  month: number;
+  year: number;
+  amountDeducted: number;
+  remainingAfter: number;
+  createdAt: string;
+}
+
+// ── Incentives — reads: OWNER/STORE_MANAGER/HR/ACCOUNTING/CASHIER; writes
+// (targets, PUT amount): CASHIER/OWNER only, server-gated.
+
+export interface IncentiveMonthEntry {
+  amount: number;
+  note: string | null;
+  awardedBy: { id: string; name: string } | null;
+  awardedAt: string;
+}
+
+export interface IncentiveRosterEntry {
+  userId: string;
+  name: string;
+  role: string;
+  thisMonth: IncentiveMonthEntry | null;
+  runningTotal: number;
+}
+
+// ── Incentive Ledger — credits stack, payouts draw down (backend/src/routes/
+// incentives.ts). Independent of the per-month PUT /:userId system above;
+// same read gate (requireManagerOrOwner) and write gate (requireCashierOrOwner
+// = CASHIER/OWNER only, narrower than Payroll's own SALARY_ADMIN_ROLES).
+export interface IncentiveCreditHistoryEntry {
+  id: string;
+  oldAmount: number | null;
+  newAmount: number;
+  changedBy: { id: string; name: string };
+  createdAt: string;
+}
+
+export interface IncentiveCredit {
+  id: string;
+  amount: number;
+  note: string | null;
+  addedBy: { id: string; name: string };
+  addedAt: string;
+  updatedAt: string;
+  history: IncentiveCreditHistoryEntry[];
+}
+
+export interface IncentivePayout {
+  id: string;
+  amount: number;
+  note: string | null;
+  paidBy: { id: string; name: string };
+  paidAt: string;
+}
+
+export interface IncentiveLedger {
+  user: { id: string; name: string; role: string };
+  totalCredited: number;
+  totalPaid: number;
+  balance: number;
+  credits: IncentiveCredit[];
+  payouts: IncentivePayout[];
+}
+
+export interface IncentiveHistoryEntry {
+  id: string;
+  userId: string;
+  month: number;
+  year: number;
+  amount: number;
+  note: string | null;
+  awardedBy: { id: string; name: string } | null;
+  awardedAt: string;
+}
+
+// ── Payslips — OWNER/STORE_MANAGER/CASHIER only, router-level gate.
+
+export interface PayslipLineItem {
+  label: string;
+  amount: number;
+}
+
+export interface PayslipPrefill {
+  employeeName: string;
+  employeeRole: string;
+  earnings: PayslipLineItem[];
+  deductions: PayslipLineItem[];
+  netPay: number;
+  existing: { id: string; generatedAt: string } | null;
+}
+
+export interface Payslip {
+  id: string;
+  userId: string;
+  month: number;
+  year: number;
+  employeeName: string;
+  employeeRole: string;
+  earnings: PayslipLineItem[];
+  deductions: PayslipLineItem[];
+  netPay: number;
+  notes: string | null;
+  generatedAt: string;
+  generatedBy: { id: string; name: string } | null;
+  user?: { id: string; name: string; designation: string | null; role: string };
+}
+
+export interface PayslipListItem {
+  id: string;
+  month: number;
+  year: number;
+  netPay: number;
+  generatedAt: string;
+}
+
+// ── Financial — OWNER/STORE_MANAGER/HR/ACCOUNTING/CASHIER only ─────────────
+
+export interface FinancialOverview {
+  revenue: { today: number; thisWeek: number; thisMonth: number; thisYear: number };
+  jobs: { today: number; thisMonth: number; thisYear: number; total: number };
+  outstanding: { amount: number };
+}
+
+export interface FinancialKpis {
+  totalRevenue: number;
+  totalJobs: number;
+  activeJobs: number;
+  walkInsToday: number;
+  conversionRate: number;
+  outstandingPayments: number;
+}
+
+export interface RevenueBreakdownItem {
+  service: string;
+  revenue: number;
+  count: number;
+}
+
+export interface OutstandingJob {
+  id: string;
+  finalAmount: number | null;
+  quotedAmount: number | null;
+  daysSinceCreated: number;
+  customer: { id: string; name: string; phone: string; whatsapp: string | null } | null;
+  assignedTo: { id: string; name: string } | null;
+  [key: string]: unknown;
+}
+
+export interface OutstandingResponse {
+  jobs: OutstandingJob[];
+  totalOutstanding: number;
+}
+
+export interface PaymentsTodayJob {
+  id: string;
+  finalAmount: number | null;
+  updatedAt: string;
+  customer: { id: string; name: string; phone: string } | null;
+  assignedTo: { id: string; name: string } | null;
+  [key: string]: unknown;
+}
+
+export interface PaymentsTodayResponse {
+  jobs: PaymentsTodayJob[];
+  totalCollected: number;
+}
+
+// Top customers + growth — added 2026-09-24 (full-parity pass). Revenue
+// trend/growth are rendered as charts on the dashboard; mobile shows the
+// same underlying data (month/day -> revenue) as a scrollable list
+// instead of a line/bar chart — no charting library is installed here,
+// and a list is a legitimate functional equivalent for this data shape,
+// not a missing feature.
+export interface TopCustomerEntry {
+  customer: { id: string; name: string; phone: string; whatsapp: string | null; email: string | null } | null;
+  invoiceCount: number;
+  totalSpent: number;
+}
+
+export type CustomerSpendSlab = 'BELOW_2L' | '2L_TO_5L' | '5L_TO_10L' | 'ABOVE_10L';
+
+export interface SlabCustomer {
+  id: string;
+  name: string;
+  phone: string;
+  vehicles: { make: string | null; model: string | null; year: number | null }[];
+  totalSpent: number;
+  purchasedItems: string[];
+}
+
+export interface MonthlyGrowthEntry {
+  month: string;
+  revenue: number;
+  jobCount: number;
+  growthPercent: number | null;
+}
+
+// ── Legal — gated by a per-user LegalAccessConfig row, not a role ──────────
+
+export type LegalCaseSection = 'PERSONAL' | 'PROFESSIONAL';
+
+export interface LegalCase {
+  id: string;
+  section: LegalCaseSection;
+  title: string;
+  status: string;
+  nextHearingDate: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: { id: string; name: string };
+}
+
+export interface LegalDocument {
+  id: string;
+  caseId: string;
+  label: string;
+  filename: string;
+  mimeType: string;
+  fileSize: number;
+  createdAt: string;
+  uploadedBy: { id: string; name: string };
+}
+
+// Create/edit case + upload document — added 2026-09-24 (full-parity
+// pass), same requireLegalAccess gate the read-only list already used
+// (router.use(verifyToken, requireLegalAccess), backend/src/routes/
+// legal_route.ts — applies to every route in the file, no exceptions).
+// File *viewing* (GET /legal/documents/:documentId/file) stays out of
+// scope — that's the actual sensitive-file-bytes-on-a-phone concern; case
+// metadata and uploading a new document don't pull existing file content
+// onto the device.
+export interface CreateLegalCaseInput {
+  section: 'PERSONAL' | 'PROFESSIONAL';
+  title: string;
+  status: string;
+  nextHearingDate?: string;
+  notes?: string;
+}
+
+export type UpdateLegalCaseInput = Partial<Omit<CreateLegalCaseInput, 'section'>>;
+
+// ── Accounts — OWNER/ACCOUNTING only ───────────────────────────────────────
+
+export interface BankAccount {
+  id: string;
+  nickname: string;
+  bankName: string;
+  accountHolderName: string;
+  accountNumber: string;
+  maskedAccountNumber: string;
+  ifscCode: string;
+  branch: string;
+  accountType: string;
+  currentBalance: number;
+  isActive: boolean;
+  balanceUpdatedAt: string | null;
+  balanceUpdatedBy: { id: string; name: string } | null;
+}
+
+// Accounts CRUD. Same canAccess=requireRoles(OWNER,ACCOUNTING) gate as the
+// read-only list this extends.
+export type BankAccountType = 'SAVINGS' | 'CURRENT' | 'OD';
+
+export interface BankAccountRevealLog {
+  id: string;
+  accountId: string;
+  revealedBy: { id: string; name: string };
+  createdAt: string;
+}
+
+export interface BankBalanceHistoryEntry {
+  id: string;
+  accountId: string;
+  balance: number;
+  updatedBy: { id: string; name: string };
+  createdAt: string;
+}
+
+export interface EmailCheckLogEntry {
+  id: string;
+  userId: string;
+  date: string;
+  checkedAt: string;
+}
+
+export interface EmailCheckState {
+  checkedToday: boolean;
+  todayLog: EmailCheckLogEntry | null;
+  history: EmailCheckLogEntry[];
+}
+
+export interface CreateBankAccountInput {
+  nickname: string;
+  bankName: string;
+  accountHolderName: string;
+  accountNumber: string;
+  ifscCode: string;
+  branch: string;
+  accountType: BankAccountType;
+  currentBalance?: number;
+}
+
+export type UpdateBankAccountInput = Partial<CreateBankAccountInput>;
+
+// Document upload — added 2026-09-24, closing the gap flagged above.
+// Same shape for bank-account docs and EMI docs (backend/src/routes/
+// accounts_route.ts): private Azure storage, streamed back through an
+// authenticated route, no public `url`.
+export interface AccountDocument {
+  id: string;
+  label: string | null;
+  filename: string;
+  mimeType: string;
+  fileSize: number;
+  uploadedBy: { id: string; name: string };
+  createdAt: string;
+}
+
+export type EMIStatus = 'ACTIVE' | 'COMPLETED' | 'CANCELLED';
+
+export interface EMI {
+  id: string;
+  lenderName: string;
+  loanPurpose: string;
+  description: string | null;
+  emiAmount: number;
+  debitDay: number;
+  bankAccountId: string | null;
+  bankAccount: { id: string; nickname: string; bankName: string } | null;
+  totalTenure: number;
+  emisPaid: number;
+  remainingBalance: number;
+  interestRate: number | null;
+  startDate: string | null;
+  principalAmount: number | null;
+  endDate: string | null;
+  notes: string | null;
+  status: EMIStatus;
+}
+
+export interface CreateEMIInput {
+  lenderName: string;
+  loanPurpose: string;
+  emiAmount: number;
+  debitDay: number;
+  totalTenure: number;
+  remainingBalance: number;
+  bankAccountId?: string;
+  interestRate?: number;
+  startDate?: string;
+  principalAmount?: number;
+  notes?: string;
+}
+
+export type PaymentReminderCategory =
+  | 'ELECTRICITY' | 'RENT' | 'INTERNET' | 'INSURANCE' | 'LICENSE'
+  | 'SUBSCRIPTION' | 'VENDOR_DUE' | 'TAX' | 'SALARY' | 'OTHER';
+export type PaymentRecurrence = 'MONTHLY' | 'QUARTERLY' | 'ANNUAL' | 'ONE_OFF';
+export type PaymentReminderStatus = 'PENDING' | 'PAID' | 'OVERDUE';
+
+export interface PaymentReminder {
+  id: string;
+  payeeName: string;
+  category: PaymentReminderCategory;
+  amount: number | null;
+  isAmountFixed: boolean;
+  dueDate: string;
+  recurrence: PaymentRecurrence;
+  bankAccount: { id: string; nickname: string; bankName: string } | null;
+  status: PaymentReminderStatus;
+  datePaid: string | null;
+  notes: string | null;
+  isActive: boolean;
+  isOverdue: boolean;
+  isDue: boolean;
+  isUpcoming: boolean;
+}
+
+export interface CreatePaymentReminderInput {
+  payeeName: string;
+  category: PaymentReminderCategory;
+  dueDate: string;
+  recurrence: PaymentRecurrence;
+  amount?: number;
+  isAmountFixed?: boolean;
+  bankAccountId?: string;
+  notes?: string;
+}
+
+// ── Work-docs — vendor/customer-interaction notes attached to a Timesheet
+// day, each with its own file attachments. BLOCKED_ROLES=[TECHNICIAN,STAFF]
+// deny the whole router; else MANAGER_ROLES=[OWNER,STORE_MANAGER] or the
+// note's own creator may view/edit/upload.
+export type WorkDocType = 'VENDOR' | 'CUSTOMER_INTERACTION';
+
+export interface WorkDocumentationFile {
+  id: string;
+  url: string;
+  filename: string;
+  mimeType: string;
+  fileSize: number;
+}
+
+export interface WorkDocQuote {
+  id: string;
+  amount: number;
+  sortOrder: number;
+}
+
+export interface WorkDocReply {
+  id: string;
+  authorId: string;
+  message: string;
+  author: { id: string; name: string };
+  createdAt: string;
+}
+
+export interface WorkDocumentation {
+  id: string;
+  timesheetId: string;
+  type: WorkDocType;
+  description: string;
+  vendorName: string | null;
+  contactPhone: string | null;
+  quotedPrice: number | null;
+  finalPrice: number | null;
+  createdById: string;
+  createdBy: { id: string; name: string };
+  customer: { id: string; name: string; phone: string } | null;
+  jobCard: { id: string; jobNumber: string; vehicleNumber: string; reasonForVisit: string } | null;
+  quotes: WorkDocQuote[];
+  replies: WorkDocReply[];
+  files: WorkDocumentationFile[];
+  createdAt: string;
+}
+
+// ── Timesheets Register — GET /timesheets/register, manager-only grid ──────
+export interface TimesheetRegisterCell {
+  id: string;
+  status: TimesheetStatus;
+  totalHours: number;
+}
+
+export interface TimesheetRegisterEmployee {
+  id: string;
+  name: string;
+  role: string;
+  timesheets: Record<string, TimesheetRegisterCell>;
+}
+
+export interface TimesheetRegister {
+  dates: string[];
+  employees: TimesheetRegisterEmployee[];
+}
+
+// ── Loans (Finance Approvals) — GET/POST /loans, ADMIN_ROLES=[OWNER,
+// STORE_MANAGER,CASHIER] to list/create; approve/reject narrower
+// [OWNER,STORE_MANAGER] with a self-approval / peer-STORE_MANAGER block
+// enforced server-side (backend/src/routes/loans.ts). Advances are a
+// separate, deliberately unbuilt product surface — not represented here.
+export interface Loan extends LoanOrAdvance {
+  rejectionReason: string | null;
+  user: { id: string; name: string; role: string; designation: string | null };
+  approvedBy: { id: string; name: string } | null;
+}
+
+// ── Staff Config — shift/attendance defaults + salary, separate Prisma
+// model from User/Employees. ADMIN_ROLES=[OWNER,STORE_MANAGER] for most
+// routes; PUT /:userId/salary additionally allows CASHIER
+// (backend/src/routes/staffConfig.ts).
+export interface ShiftConfig {
+  userId: string;
+  customClockIn: string | null;
+  customClockOut: string | null;
+  workingDaysPerMonth: number | null;
+  defaultLeaves: number | null;
+}
+
+export interface SalaryHistoryEntry {
+  id: string;
+  userId: string;
+  oldSalary: number | null;
+  newSalary: number;
+  effectiveFrom: string;
+  changedBy: { id: string; name: string };
+  createdAt?: string;
+}
+
+// ── My Attendance (full module) — GET /attendance/late-records and
+// /attendance/warnings are self-or-manager scoped via verifyToken alone (no
+// role gate), backend/src/routes/attendance.ts, verified 2026-09-20. Do NOT
+// build any edit/override/pardon action here — /attendance/register and the
+// related edit-log endpoints reference (prisma as any).attendanceEditLog,
+// a Prisma model that does not exist in schema.prisma and will 500.
+export interface WarningRecord {
+  id: string;
+  userId: string;
+  reason: string;
+  issuedAt: string;
+  month: number;
+  year: number;
+  source: string;
+}
+
+// ── Quotations — GET/POST /quotations, backend/src/routes/quotationRoutes.ts.
+// Built 2026-09-23, read-only + cancel (matches the invoices.tsx precedent:
+// document-CRUD screens with a line-item wizard on the dashboard stay
+// read-only on mobile; the create/edit wizard itself is not replicated
+// here). List/detail: ADMIN_ROLES=[OWNER,STORE_MANAGER,ACCOUNTING] see all,
+// everyone else sees only their own created quotations, or nothing without
+// an explicit per-employee 'quotations' permission override. Cancel
+// (PATCH /:id/cancel, sets status to REJECTED) is ADMIN_ROLES-only.
+export type QuotationStatus = 'DRAFT' | 'SENT' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED';
+
+export interface QuotationListItem {
+  id: string;
+  quotationNumber: string;
+  quotationDate: string;
+  validUntil: string | null;
+  customerName: string;
+  customerPhone: string | null;
+  vehicleNumber: string | null;
+  grandTotal: number;
+  status: QuotationStatus;
+  createdAt: string;
+  createdBy: { id: string; name: string; username: string };
+}
+
+// customerEmail/Address/GSTIN and vehicle brand/model/year/colour — these
+// scalar fields are already present on the raw GET /quotations/:id
+// response (no `select` on that route, verified by reading it), just
+// never declared here or editable until 2026-09-24.
+
+export interface QuotationLineItem {
+  id: number;
+  description: string;
+  hsnSacCode: string | null;
+  quantity: number;
+  unitPrice: number;
+  discountPct: number;
+  discountAmount: number;
+  discountMode: string;
+  amount: number;
+}
+
+export interface QuotationDetail extends QuotationListItem {
+  subtotal: number;
+  discountAmount: number;
+  overallDiscountAmount: number;
+  cgst: number;
+  sgst: number;
+  roundOff: number;
+  gstRate: number;
+  notes: string | null;
+  termsConditions: string | null;
+  lineItems: QuotationLineItem[];
+  customerEmail: string | null;
+  customerAddress: string | null;
+  customerGSTIN: string | null;
+  vehicleBrand: string | null;
+  vehicleModel: string | null;
+  vehicleYear: string | null;
+  vehicleColour: string | null;
+}
+
+// POST/PUT /quotations — create/edit added 2026-09-23 (scope update: full
+// dashboard parity). Same calculateAmounts() server-side computation as
+// invoices — the client sends raw line items, never a precomputed total,
+// so this mirrors CreateInvoiceInput's shape deliberately. Job-card/CRM
+// linking and per-line GST rates (the inventory-item-picker wizard's
+// manualAmounts path) are out of scope, same cut already made for
+// invoices' create form.
+export interface QuotationLineItemInput {
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  discountAmount?: number;
+  discountMode?: 'PERCENT' | 'FIXED';
+}
+
+export interface CreateQuotationInput {
+  customerName: string;
+  customerPhone?: string;
+  customerEmail?: string;
+  customerAddress?: string;
+  customerGSTIN?: string;
+  vehicleNumber?: string;
+  vehicleBrand?: string;
+  vehicleModel?: string;
+  vehicleYear?: string;
+  vehicleColour?: string;
+  lineItems: QuotationLineItemInput[];
+  gstRate?: number;
+  notes?: string;
+  termsConditions?: string;
+  validUntil?: string;
+}
+
+export type UpdateQuotationInput = Partial<CreateQuotationInput> & { status?: QuotationStatus };

@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "991725270396",
+    "project_id": "fasttracks-ee593",
+    "storage_bucket": "fasttracks-ee593.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:991725270396:android:96b3a97cfb04003e4460f9",
+        "android_client_info": {
+          "package_name": "com.fasttrackscarcare.dashboard"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3_L7z4MR6xG6IMibeaIQyTagAQwNsdEc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:991725270396:android:11cd445ff8fe1eb44460f9",
+        "android_client_info": {
+          "package_name": "in.fasttrackscarcare.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3_L7z4MR6xG6IMibeaIQyTagAQwNsdEc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

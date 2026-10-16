@@ -1,0 +1,763 @@
+<title>Fasttracks Screen Atlas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EDEFF2;
+    --paper-raised:#FFFFFF;
+    --ink:#171B21;
+    --ink-soft:#4B5563;
+    --ink-faint:#7A8390;
+    --line:#D7DBE0;
+    --line-soft:#E4E7EB;
+    --accent:#C8600A;
+    --accent-ink:#8A4207;
+    --accent-soft:#F2E1CF;
+    --sem-high-bg:#E1F0E6;
+    --sem-high-ink:#1E6B3D;
+    --sem-low-bg:#E7E9EC;
+    --sem-low-ink:#565F6B;
+    --sem-sens-bg:#FBE4E1;
+    --sem-sens-ink:#A32E1F;
+    --sem-orphan-bg:#F1E7D3;
+    --sem-orphan-ink:#8A6417;
+    --code-bg:#E4E7EC;
+    --shadow: 0 1px 2px rgba(23,27,33,0.06), 0 8px 24px -12px rgba(23,27,33,0.18);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --paper:#14171C;
+      --paper-raised:#1B1F26;
+      --ink:#E9EBEF;
+      --ink-soft:#AEB6C2;
+      --ink-faint:#7B8492;
+      --line:#2B313A;
+      --line-soft:#242A32;
+      --accent:#E08A3E;
+      --accent-ink:#F3C08A;
+      --accent-soft:#3A2A18;
+      --sem-high-bg:#173523;
+      --sem-high-ink:#7FD9A0;
+      --sem-low-bg:#262B32;
+      --sem-low-ink:#A6AEB9;
+      --sem-sens-bg:#3B211D;
+      --sem-sens-ink:#F0968A;
+      --sem-orphan-bg:#332B18;
+      --sem-orphan-ink:#E0B762;
+      --code-bg:#20252C;
+      --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 8px 24px -12px rgba(0,0,0,0.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --paper:#14171C;
+    --paper-raised:#1B1F26;
+    --ink:#E9EBEF;
+    --ink-soft:#AEB6C2;
+    --ink-faint:#7B8492;
+    --line:#2B313A;
+    --line-soft:#242A32;
+    --accent:#E08A3E;
+    --accent-ink:#F3C08A;
+    --accent-soft:#3A2A18;
+    --sem-high-bg:#173523;
+    --sem-high-ink:#7FD9A0;
+    --sem-low-bg:#262B32;
+    --sem-low-ink:#A6AEB9;
+    --sem-sens-bg:#3B211D;
+    --sem-sens-ink:#F0968A;
+    --sem-orphan-bg:#332B18;
+    --sem-orphan-ink:#E0B762;
+    --code-bg:#20252C;
+    --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 8px 24px -12px rgba(0,0,0,0.6);
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'IBM Plex Sans', ui-sans-serif, system-ui, sans-serif;
+    line-height:1.5;
+  }
+  code, .mono{
+    font-family:'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+  }
+  h1,h2,h3{
+    font-family:'Archivo', ui-sans-serif, system-ui, sans-serif;
+    text-wrap:balance;
+    letter-spacing:-0.01em;
+  }
+
+  a{color:var(--accent-ink);}
+
+  .wrap{
+    max-width:1180px;
+    margin:0 auto;
+    padding:2.5rem 1.5rem 5rem;
+  }
+
+  /* ---- header ---- */
+  header{
+    display:flex;
+    flex-direction:column;
+    gap:0.6rem;
+    padding-bottom:2rem;
+    border-bottom:1px solid var(--line);
+    margin-bottom:1.75rem;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:0.72rem;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--accent-ink);
+    display:flex;
+    align-items:center;
+    gap:0.5rem;
+  }
+  .eyebrow::before{
+    content:"";
+    width:0.5rem;height:0.5rem;
+    background:var(--accent);
+    border-radius:1px;
+    display:inline-block;
+  }
+  h1{
+    font-size:clamp(1.9rem, 3vw, 2.6rem);
+    font-weight:800;
+    margin:0;
+  }
+  .lede{
+    max-width:62ch;
+    color:var(--ink-soft);
+    font-size:1.02rem;
+  }
+
+  /* ---- stat readout ---- */
+  .readout{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:1px;
+    background:var(--line);
+    border:1px solid var(--line);
+    border-radius:10px;
+    overflow:hidden;
+    margin-top:1.5rem;
+  }
+  .stat{
+    background:var(--paper-raised);
+    padding:1rem 1.1rem;
+    display:flex;
+    flex-direction:column;
+    gap:0.15rem;
+  }
+  .stat .n{
+    font-family:'Archivo';
+    font-weight:800;
+    font-size:1.9rem;
+    font-variant-numeric:tabular-nums;
+    line-height:1;
+  }
+  .stat .n.accent{color:var(--accent-ink);}
+  .stat .n.sens{color:var(--sem-sens-ink);}
+  .stat .n.orph{color:var(--sem-orphan-ink);}
+  .stat .l{
+    font-size:0.78rem;
+    color:var(--ink-faint);
+  }
+
+  /* ---- section nav ---- */
+  nav.jump{
+    position:sticky;
+    top:0;
+    z-index:5;
+    display:flex;
+    flex-wrap:wrap;
+    gap:0.5rem;
+    padding:0.75rem 0;
+    margin-bottom:1rem;
+    background:var(--paper);
+    background:color-mix(in srgb, var(--paper) 92%, transparent);
+    backdrop-filter:blur(6px);
+    border-bottom:1px solid var(--line-soft);
+  }
+  nav.jump a{
+    font-size:0.82rem;
+    font-weight:500;
+    color:var(--ink-soft);
+    text-decoration:none;
+    padding:0.4rem 0.75rem;
+    border-radius:999px;
+    border:1px solid var(--line);
+    background:var(--paper-raised);
+    white-space:nowrap;
+  }
+  nav.jump a:hover{border-color:var(--accent); color:var(--accent-ink);}
+
+  section.group{
+    margin:2.75rem 0;
+    scroll-margin-top:4rem;
+  }
+  .group-head{
+    display:flex;
+    align-items:baseline;
+    gap:0.75rem;
+    flex-wrap:wrap;
+    margin-bottom:0.35rem;
+  }
+  .group-head h2{
+    font-size:1.35rem;
+    margin:0;
+  }
+  .group-count{
+    font-family:'IBM Plex Mono';
+    font-size:0.8rem;
+    color:var(--ink-faint);
+    background:var(--line-soft);
+    padding:0.15rem 0.55rem;
+    border-radius:999px;
+  }
+  .group-note{
+    color:var(--ink-soft);
+    font-size:0.95rem;
+    max-width:70ch;
+    margin:0.15rem 0 1.1rem;
+  }
+
+  .table-scroll{
+    overflow-x:auto;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:var(--paper-raised);
+    box-shadow:var(--shadow);
+  }
+  table{
+    width:100%;
+    border-collapse:collapse;
+    min-width:820px;
+  }
+  thead th{
+    text-align:left;
+    font-size:0.72rem;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--ink-faint);
+    font-weight:600;
+    padding:0.7rem 0.9rem;
+    border-bottom:1px solid var(--line);
+    position:sticky;
+    top:0;
+    background:var(--paper-raised);
+  }
+  tbody td{
+    padding:0.75rem 0.9rem;
+    border-bottom:1px solid var(--line-soft);
+    vertical-align:top;
+    font-size:0.9rem;
+  }
+  tbody tr:last-child td{border-bottom:none;}
+  tbody tr:hover{background:var(--line-soft);}
+
+  .name{font-weight:600;}
+  .route{
+    display:block;
+    color:var(--ink-faint);
+    font-size:0.78rem;
+    margin-top:0.15rem;
+  }
+  .purpose{color:var(--ink-soft); max-width:34ch;}
+
+  .eps{display:flex; flex-direction:column; gap:0.3rem; min-width:15rem;}
+  .eps code{
+    font-size:0.76rem;
+    background:var(--code-bg);
+    color:var(--ink-soft);
+    padding:0.15rem 0.4rem;
+    border-radius:5px;
+    display:inline-block;
+    width:fit-content;
+  }
+
+  .pill{
+    display:inline-flex;
+    align-items:center;
+    gap:0.3rem;
+    font-size:0.74rem;
+    font-weight:600;
+    padding:0.22rem 0.55rem;
+    border-radius:999px;
+    white-space:nowrap;
+  }
+  .pill.high{background:var(--sem-high-bg); color:var(--sem-high-ink);}
+  .pill.low{background:var(--sem-low-bg); color:var(--sem-low-ink);}
+  .pill.sens{background:var(--sem-sens-bg); color:var(--sem-sens-ink);}
+  .pill.orphan{background:var(--sem-orphan-bg); color:var(--sem-orphan-ink);}
+  .pill.none{background:transparent; color:var(--ink-faint); font-weight:400;}
+
+  .flagcell{display:flex; flex-direction:column; gap:0.35rem; align-items:flex-start;}
+
+  .callout{
+    border:1px solid var(--line);
+    border-left:3px solid var(--accent);
+    background:var(--paper-raised);
+    border-radius:8px;
+    padding:1.1rem 1.3rem;
+    margin-top:1rem;
+    box-shadow:var(--shadow);
+  }
+  .callout h3{font-size:1rem; margin:0 0 0.5rem;}
+  .callout p{margin:0.3rem 0; color:var(--ink-soft); font-size:0.92rem;}
+  .callout p + p{margin-top:0.55rem;}
+  .callout b{color:var(--ink);}
+
+  footer{
+    margin-top:3rem;
+    padding-top:1.25rem;
+    border-top:1px solid var(--line);
+    color:var(--ink-faint);
+    font-size:0.8rem;
+  }
+
+  @media (prefers-reduced-motion: no-preference){
+    section.group{animation:rise 0.5s ease-out both;}
+    @keyframes rise{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+  }
+  @media (max-width:640px){
+    .readout{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .purpose{max-width:none;}
+  }
+</style>
+
+<div class="wrap">
+
+  <header>
+    <span class="eyebrow">Mobile build planning · read before stubbing screens</span>
+    <h1>Fasttracks Screen Atlas</h1>
+    <p class="lede">Every tab and sub-view in the dashboard's navigation, mapped for the mobile build order: what it does, what it calls, whether staff would want it on a phone, and whether it's sensitive enough to need a security decision before it ships there.</p>
+
+    <div class="readout">
+      <div class="stat"><span class="n">62</span><span class="l">screens catalogued</span></div>
+      <div class="stat"><span class="n accent">23</span><span class="l">high mobile value</span></div>
+      <div class="stat"><span class="n sens">21</span><span class="l">flagged sensitive</span></div>
+      <div class="stat"><span class="n orph">7</span><span class="l">orphaned — no nav link</span></div>
+    </div>
+  </header>
+
+  <nav class="jump">
+    <a href="#build-first">Build first</a>
+    <a href="#needs-decision">Needs a security decision</a>
+    <a href="#defer">Desk-only — defer</a>
+    <a href="#orphans">Orphaned routes</a>
+    <a href="#notes">Role-gating &amp; recommendation</a>
+  </nav>
+
+  <!-- ================= GROUP 1 ================= -->
+  <section class="group" id="build-first">
+    <div class="group-head">
+      <h2>Build first — high mobile value, nothing sensitive</h2>
+      <span class="group-count">19 screens</span>
+    </div>
+    <p class="group-note">Field/ops work a phone is actually good for. This is the v1 candidate pool.</p>
+
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Screen</th><th>Purpose</th><th>Endpoints</th><th>Flags</th></tr></thead>
+        <tbody>
+
+          <tr><td><span class="name">Overview</span><span class="route">/dashboard</span></td>
+          <td class="purpose">Landing dashboard / home stats, all roles</td>
+          <td class="eps"><code>dashboardAPI summary GETs</code></td>
+          <td class="flagcell"><span class="pill high">High value</span></td></tr>
+
+          <tr><td><span class="name">Customers &amp; Jobs — Jobs</span><span class="route">/dashboard/customers</span></td>
+          <td class="purpose">Active job cards / walk-ins queue</td>
+          <td class="eps"><code>GET /job-cards/board</code><code>GET /job-cards/active</code><code>PATCH /job-cards/:id/status</code><code>PATCH /job-cards/:id/reassign</code></td>
+          <td class="flagcell"><span class="pill high">High value</span></td></tr>
+
+          <tr><td><span class="name">Customers &amp; Jobs — Customers</span><span class="route">/dashboard/customers</span></td>
+          <td class="purpose">CRM customer &amp; vehicle directory, search</td>
+          <td class="eps"><code>GET /crm/customers</code><code>GET /crm/customers/:id/profile</code><code>PATCH /crm/customers/:id</code><code>POST /crm/customers/:id/vehicles</code></td>
+          <td class="flagcell"><span class="pill high">High value</span></td></tr>
+
+          <tr><td><span class="name">Customers &amp; Jobs — Status</span><span class="route">/dashboard/customers</span></td>
+          <td class="purpose">Kanban job-status board <span class="mono">(2026-08-19)</span></td>
+          <td class="eps"><code>same job-cards endpoints</code></td>
+          <td class="flagcell"><span class="pill high">High value</span></td></tr>
+
+          <tr><td><span class="name">New Entry</span><span class="route">/dashboard/entry</span></td>
+          <td class="purpose">Create job card / walk-in intake</td>
+          <td class="eps"><code>POST /job-cards</code><code>GET /job-cards/lookup?phone=</code><code>POST /job-cards/:id/inspection-media</code></td>
+          <td class="flagcell"><span class="pill high">High value</span></td></tr>
+
+          <tr><td><span class="name">Attendance — Mine</span><span class="route">/dashboard/attendance</span></td>
+          <td class="purpose">Own clock in/out, monthly view, leave request</td>
+          <td class="eps"><code>POST /attendance/clock-in</code><code>POST /attendance/clock-out</code><code>GET /attendance/my</code><code>POST /attendance/leave-request</code></td>
+          <td class="flagcell"><span class="pill high">High value</span></td></tr>
+
+          <tr><td><span class="name">Attendance — All (register)</span><span class="route">/dashboard/attendance</span></td>
+          <td class="purpose">Manager view of everyone's attendance</td>
+          <td class="eps"><code>GET /attendance/monthly</code><code>GET /attendance/register</code><code>GET /attendance/punches</code></td>
+          <td class="flagcell"><span class="pill high">High — managers</span></td></tr>
+
+          <tr><td><span class="name">Tasks</span><span class="route">/dashboard/my-tasks</span></td>
+          <td class="purpose">Personal task list, own + assigned</td>
+          <td class="eps"><code>GET/POST /tasks</code><code>PATCH /tasks/:id/status</code><code>POST /tasks/:id/reply</code></td>
+          <td class="flagcell"><span class="pill high">High value</span></td></tr>
+
+          <tr><td><span class="name">Team Chat</span><span class="route">/dashboard/tasks <span class="mono">(sidebar label only)</span></span></td>
+          <td class="purpose">Internal staff messaging</td>
+          <td class="eps"><code>GET/POST /team-chat</code><code>GET /team-chat/:id/messages</code></td>
+          <td class="flagcell"><span class="pill high">High value</span></td></tr>
+
+          <tr><td><span class="name">Overtime</span><span class="route">/dashboard/overtime</span></td>
+          <td class="purpose">Self-service overtime request + own history</td>
+          <td class="eps"><code>POST /overtime</code><code>GET /overtime/my</code></td>
+          <td class="flagcell"><span class="pill high">High value</span></td></tr>
+
+          <tr><td><span class="name">Job Tracker</span><span class="route">/dashboard/pipeline</span></td>
+          <td class="purpose">Job pipeline view for sales &amp; technicians</td>
+          <td class="eps"><code>jobsAPI</code><code>employeesAPI</code></td>
+          <td class="flagcell"><span class="pill high">High value</span></td></tr>
+
+          <tr><td><span class="name">Conversations</span><span class="route">/dashboard/conversations</span></td>
+          <td class="purpose">WhatsApp-style inbox, assign, flag high-value</td>
+          <td class="eps"><code>GET/POST /conversations</code><code>PUT /conversations/:id/status</code><code>/flag</code><code>/assign</code></td>
+          <td class="flagcell"><span class="pill high">High value</span></td></tr>
+
+          <tr><td><span class="name">Invoices — Invoices</span><span class="route">/dashboard/invoices</span></td>
+          <td class="purpose">Create/manage invoices, record payments, send</td>
+          <td class="eps"><code>GET/POST/PUT/DELETE /invoices</code><code>POST /payments/record</code><code>/invoices/:id/whatsapp-invoice</code></td>
+          <td class="flagcell"><span class="pill high">High value</span></td></tr>
+
+          <tr><td><span class="name">Expenses — Submit</span><span class="route">/dashboard/expenses</span></td>
+          <td class="purpose">File an expense — AI receipt extract, bulk, single</td>
+          <td class="eps"><code>POST /expenses</code><code>/extract</code><code>/extract-statement</code><code>/bulk</code></td>
+          <td class="flagcell"><span class="pill high">High value</span></td></tr>
+
+          <tr><td><span class="name">Expenses — Pending</span><span class="route">/dashboard/expenses</span></td>
+          <td class="purpose">Review pending submissions</td>
+          <td class="eps"><code>GET /expenses</code><code>PATCH /expenses/:id/approve</code><code>/reject</code></td>
+          <td class="flagcell"><span class="pill high">High — filers</span><span class="pill low">Low — approvers</span></td></tr>
+
+          <tr><td><span class="name">Expenses — All</span><span class="route">/dashboard/expenses</span></td>
+          <td class="purpose">Full expense history/log</td>
+          <td class="eps"><code>GET /expenses</code><code>/summary</code></td>
+          <td class="flagcell"><span class="pill high">Mixed</span></td></tr>
+
+          <tr><td><span class="name">Reminders</span><span class="route">/dashboard/reminders</span></td>
+          <td class="purpose">Personal reminders — snooze/ack/done</td>
+          <td class="eps"><code>GET/POST /reminders/definitions</code><code>GET /reminders/mine</code><code>POST /reminders/occurrences/:id/ack</code></td>
+          <td class="flagcell"><span class="pill high">High value</span></td></tr>
+
+          <tr><td><span class="name">My Timesheet</span><span class="route">/dashboard/timesheet</span></td>
+          <td class="purpose">Own timesheet entries, customer tagging, attachments</td>
+          <td class="eps"><code>GET/POST /timesheets</code><code>PATCH /timesheets/:id/submit</code></td>
+          <td class="flagcell"><span class="pill high">High value</span></td></tr>
+
+          <tr><td><span class="name">Install App</span><span class="route">/install</span></td>
+          <td class="purpose">PWA/APK install instructions <span class="mono">(static)</span></td>
+          <td class="eps"><code>none</code></td>
+          <td class="flagcell"><span class="pill high">Rollout-relevant</span></td></tr>
+
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= GROUP 2 ================= -->
+  <section class="group" id="needs-decision">
+    <div class="group-head">
+      <h2>High value, but sensitive — needs a call before it ships</h2>
+      <span class="group-count">4 screens</span>
+    </div>
+    <p class="group-note">Staff would genuinely want these on a phone — but each widens risk if the phone is lost, shared, or compromised.</p>
+
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Screen</th><th>Purpose</th><th>Endpoints</th><th>Why sensitive</th></tr></thead>
+        <tbody>
+
+          <tr><td><span class="name">My Salary</span><span class="route">/dashboard/my-salary</span></td>
+          <td class="purpose">Own salary summary, overtime &amp; late records</td>
+          <td class="eps"><code>payrollAPI</code><code>GET /overtime/my</code><code>GET /attendance/late-records</code></td>
+          <td class="flagcell"><span class="pill sens">Sensitive</span><span style="color:var(--ink-faint);font-size:0.8rem;">own salary figures</span></td></tr>
+
+          <tr><td><span class="name">My Finance</span><span class="route">/dashboard/my-finance</span></td>
+          <td class="purpose">Self-service loan/advance request + repayments</td>
+          <td class="eps"><code>GET/POST /loans</code><code>GET/POST /advances</code><code>GET /loans/:id/repayments</code></td>
+          <td class="flagcell"><span class="pill sens">Sensitive</span><span style="color:var(--ink-faint);font-size:0.8rem;">personal financial data</span></td></tr>
+
+          <tr><td><span class="name">Personal Info</span><span class="route">/dashboard/personal-info</span></td>
+          <td class="purpose">Own profile + ID document self-upload</td>
+          <td class="eps"><code>GET /auth/me</code><code>identityDocumentsAPI</code></td>
+          <td class="flagcell"><span class="pill sens">Sensitive</span><span style="color:var(--ink-faint);font-size:0.8rem;">own government ID images</span></td></tr>
+
+          <tr><td><span class="name">Calls</span><span class="route">/dashboard/calls</span></td>
+          <td class="purpose">Click-to-call, call log &amp; recordings</td>
+          <td class="eps"><code>GET /calls/capabilities</code><code>POST /calls/initiate</code><code>GET /calls</code><code>GET /call-recordings/my-summary</code></td>
+          <td class="flagcell"><span class="pill sens">Sensitive</span><span style="color:var(--ink-faint);font-size:0.8rem;">call recordings</span></td></tr>
+
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= GROUP 3 ================= -->
+  <section class="group" id="defer">
+    <div class="group-head">
+      <h2>Desk-only — defer regardless of build order</h2>
+      <span class="group-count">32 screens</span>
+    </div>
+    <p class="group-note">Payroll admin, inventory management, MDM/device control, system configuration — nobody's asking for these mid-shift on a phone. Sensitivity is still flagged for context.</p>
+
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Screen</th><th>Purpose</th><th>Endpoints</th><th>Flags</th></tr></thead>
+        <tbody>
+
+          <tr><td><span class="name">Employees — Overview</span><span class="route">/dashboard/employees</span></td>
+          <td class="purpose">Staff directory, add/edit/deactivate</td>
+          <td class="eps"><code>GET/POST /employees</code><code>PUT /employees/:id</code><code>PATCH /employees/:id/deactivate</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span></td></tr>
+
+          <tr><td><span class="name">Employees — Pardon</span><span class="route">/dashboard/employees</span></td>
+          <td class="purpose">Override/pardon an attendance mark</td>
+          <td class="eps"><code>PATCH /attendance/pardon</code><code>POST /attendance/bulk-mark</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span></td></tr>
+
+          <tr><td><span class="name">Employees — Scans</span><span class="route">/dashboard/employees</span></td>
+          <td class="purpose">Device/biometric scan reconciliation</td>
+          <td class="eps"><code>attendanceAPI punch endpoints</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span></td></tr>
+
+          <tr><td><span class="name">Employees — Tasks</span><span class="route">/dashboard/employees</span></td>
+          <td class="purpose">Assign/view recurring tasks per employee</td>
+          <td class="eps"><code>recurringTasksAPI</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span></td></tr>
+
+          <tr><td><span class="name">Employees — Timesheet</span><span class="route">/dashboard/employees</span></td>
+          <td class="purpose">Per-employee timesheet drill-down</td>
+          <td class="eps"><code>timesheetAPI</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span></td></tr>
+
+          <tr><td><span class="name">Employees — Documents</span><span class="route">/dashboard/employees</span></td>
+          <td class="purpose">Identity document upload/view per employee</td>
+          <td class="eps"><code>GET/POST /identity-documents/:userId</code><code>DELETE /identity-documents/file/:id</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span><span class="pill sens">Sensitive</span></td></tr>
+
+          <tr><td><span class="name">Employees — Configure</span><span class="route">/dashboard/employees</span></td>
+          <td class="purpose">Per-user permission-mode picker across all tabs</td>
+          <td class="eps"><code>permissionsAPI</code><code>PUT /staff-config/:userId</code><code>/salary</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span><span class="pill sens">Sensitive</span></td></tr>
+
+          <tr><td><span class="name">Finance Approvals — Active</span><span class="route">/dashboard/finance-approvals</span></td>
+          <td class="purpose">Overview of active loans/advances across staff</td>
+          <td class="eps"><code>GET /loans</code><code>GET /advances</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span><span class="pill sens">Sensitive</span></td></tr>
+
+          <tr><td><span class="name">Finance Approvals — Loans</span><span class="route">/dashboard/finance-approvals</span></td>
+          <td class="purpose">Approve/reject employee loan requests</td>
+          <td class="eps"><code>PATCH /loans/:id</code><code>POST /loans/admin</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span><span class="pill sens">Sensitive</span></td></tr>
+
+          <tr><td><span class="name">Finance Approvals — Advances</span><span class="route">/dashboard/finance-approvals</span></td>
+          <td class="purpose">Approve/reject employee advance requests</td>
+          <td class="eps"><code>PATCH /advances/:id</code><code>POST /advances/admin</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span><span class="pill sens">Sensitive</span></td></tr>
+
+          <tr><td><span class="name">Overtime Approval</span><span class="route">/dashboard/overtime-approval</span></td>
+          <td class="purpose">Manager approves overtime, sets actual hours</td>
+          <td class="eps"><code>GET /overtime/pending</code><code>PATCH /overtime/:id/approve</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span></td></tr>
+
+          <tr><td><span class="name">Payroll</span><span class="route">/dashboard/payroll</span></td>
+          <td class="purpose">Calculate, override, disburse salaries company-wide</td>
+          <td class="eps"><code>GET /payroll/calculate</code><code>/all</code><code>POST /payroll/disbursement</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span><span class="pill sens">Sensitive</span></td></tr>
+
+          <tr><td><span class="name">Incentives</span><span class="route">/dashboard/incentives</span></td>
+          <td class="purpose">Sales/staff incentive &amp; bonus tracking</td>
+          <td class="eps"><code>GET /incentives</code><code>POST /incentives/targets</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span><span class="pill sens">Sensitive</span></td></tr>
+
+          <tr><td><span class="name">Payslips</span><span class="route">/dashboard/payslips</span></td>
+          <td class="purpose">Generate formal payslip documents</td>
+          <td class="eps"><code>GET /payslips/prefill</code><code>POST /payslips</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span><span class="pill sens">Sensitive</span></td></tr>
+
+          <tr><td><span class="name">Financial</span><span class="route">/dashboard/financial</span></td>
+          <td class="purpose">Executive revenue/financial overview</td>
+          <td class="eps"><code>GET /financial/overview</code><code>/revenue-breakdown</code><code>/kpis</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span><span class="pill sens">Sensitive</span></td></tr>
+
+          <tr><td><span class="name">Legal Documents</span><span class="route">/dashboard/legal</span></td>
+          <td class="purpose">Legal case &amp; document management</td>
+          <td class="eps"><code>GET/POST /legal/cases</code><code>/documents</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span><span class="pill sens">Sensitive</span></td></tr>
+
+          <tr><td><span class="name">AI Agents</span><span class="route">/dashboard/agents</span></td>
+          <td class="purpose">Toggle automated marketing agents</td>
+          <td class="eps"><code>GET /agents</code><code>PATCH /agents/:name/toggle</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span></td></tr>
+
+          <tr><td><span class="name">Inventory — Products</span><span class="route">/dashboard/inventory</span></td>
+          <td class="purpose">Product/stock catalog CRUD, barcode printing</td>
+          <td class="eps"><code>/api/v1/inventory-items</code><code>erp/items stock-in/out/adjust</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span></td></tr>
+
+          <tr><td><span class="name">Inventory — Drafts</span><span class="route">/dashboard/inventory</span></td>
+          <td class="purpose">Draft/incomplete product entries</td>
+          <td class="eps"><code>same as Products</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span></td></tr>
+
+          <tr><td><span class="name">Inventory — Items Out</span><span class="route">/dashboard/inventory</span></td>
+          <td class="purpose">Items checked out/loaned tracker</td>
+          <td class="eps"><code>same as Products</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span></td></tr>
+
+          <tr><td><span class="name">Accounts</span><span class="route">/dashboard/accounts</span></td>
+          <td class="purpose">Company bank accounts, EMIs, payment reminders</td>
+          <td class="eps"><code>GET/POST /accounts/bank</code><code>/emis</code><code>/reminders</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span><span class="pill sens">Sensitive</span></td></tr>
+
+          <tr><td><span class="name">ERP Finance</span><span class="route">/dashboard/finance</span></td>
+          <td class="purpose">ERP finance module — orders, services, revenue</td>
+          <td class="eps"><code>GET /erp/finance/overview</code><code>/orders</code><code>/monthly-breakdown</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span><span class="pill sens">Sensitive</span></td></tr>
+
+          <tr><td><span class="name">Expenses — Trends</span><span class="route">/dashboard/expenses</span></td>
+          <td class="purpose">Expense analytics/trends</td>
+          <td class="eps"><code>GET /expenses/summary</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span></td></tr>
+
+          <tr><td><span class="name">Password Manager</span><span class="route">/dashboard/password-manager</span></td>
+          <td class="purpose">Shared credential + payment card vault</td>
+          <td class="eps"><code>GET/POST/PUT/DELETE /passwords</code><code>/cards</code><code>GET /passwords/:id/reveal</code><code>/cards/:id/reveal-cvv</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span><span class="pill sens">Sensitive</span></td></tr>
+
+          <tr><td><span class="name">Invoices — Reports</span><span class="route">/dashboard/invoices</span></td>
+          <td class="purpose">Invoice/revenue reporting view</td>
+          <td class="eps"><code>GET /invoices/reports</code><code>/stats</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span></td></tr>
+
+          <tr><td><span class="name">Devices</span><span class="route">/dashboard/devices</span></td>
+          <td class="purpose">MDM device inventory — enroll/lock/unlock</td>
+          <td class="eps"><code>GET /devices</code><code>POST /devices/enroll</code><code>PATCH /devices/:id/lock</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span><span class="pill sens">Sensitive</span></td></tr>
+
+          <tr><td><span class="name">App Policies</span><span class="route">/dashboard/devices/policies</span></td>
+          <td class="purpose">MDM allowlist of permitted apps</td>
+          <td class="eps"><code>GET/POST/DELETE /devices/policies</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span><span class="pill sens">Sensitive</span></td></tr>
+
+          <tr><td><span class="name">Device Alerts</span><span class="route">/dashboard/devices/alerts</span></td>
+          <td class="purpose">Geofence-exit / device-offline alert feed</td>
+          <td class="eps"><code>GET /devices/alerts</code><code>PATCH /devices/alerts/:id/read</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span><span class="pill sens">Sensitive</span></td></tr>
+
+          <tr><td><span class="name">Live Location</span><span class="route">/dashboard/devices/location</span></td>
+          <td class="purpose">Real-time device location map with geofences</td>
+          <td class="eps"><code>GET /devices/:id/location-logs</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span><span class="pill sens">Sensitive</span></td></tr>
+
+          <tr><td><span class="name">SIM Tracker</span><span class="route">/dashboard/sim-tracker</span></td>
+          <td class="purpose">Company SIM card inventory/assignment</td>
+          <td class="eps"><code>GET/POST/PUT/DELETE /sims</code><code>/sims/stats</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span></td></tr>
+
+          <tr><td><span class="name">Company Settings</span><span class="route">/dashboard/settings/company</span></td>
+          <td class="purpose">Edit company profile — GST no., name, logo</td>
+          <td class="eps"><code>apiClient GET/PUT company settings</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span></td></tr>
+
+          <tr><td><span class="name">All Timesheets</span><span class="route">/dashboard/timesheets</span></td>
+          <td class="purpose">Manager view of all staff timesheets, approve/reject</td>
+          <td class="eps"><code>GET /timesheets</code><code>PATCH /timesheets/:id/approve</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span></td></tr>
+
+          <tr><td><span class="name">Remarks</span><span class="route">/dashboard/remarks</span></td>
+          <td class="purpose">Owner-only staff ratings/notes + employee read-only view</td>
+          <td class="eps"><code>GET/POST/PATCH/DELETE /remarks</code><code>GET /remarks/mine</code></td>
+          <td class="flagcell"><span class="pill low">Low value</span><span class="pill sens">Sensitive</span></td></tr>
+
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ================= GROUP 4 ================= -->
+  <section class="group" id="orphans">
+    <div class="group-head">
+      <h2>Orphaned routes — exist in code, no nav link</h2>
+      <span class="group-count">7 routes</span>
+    </div>
+    <p class="group-note">These have real backend endpoints and working pages, but nothing in the sidebar links to them — reachable only by typing the URL. Worth asking whether they're dead, superseded, or just forgotten before deciding whether the mobile app should ever touch them.</p>
+
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Screen</th><th>Purpose</th><th>Endpoints</th><th>Flags</th></tr></thead>
+        <tbody>
+
+          <tr><td><span class="name">Sales Orders</span><span class="route">/dashboard/sales</span></td>
+          <td class="purpose">Create/manage sales orders — matches the <code class="mono">sales_orders</code> permission key</td>
+          <td class="eps"><code>GET/POST /erp/sales</code><code>PATCH /erp/sales/:id/status</code></td>
+          <td class="flagcell"><span class="pill orphan">Orphaned</span></td></tr>
+
+          <tr><td><span class="name">Purchasing</span><span class="route">/dashboard/purchasing</span></td>
+          <td class="purpose">Purchase orders &amp; supplier management</td>
+          <td class="eps"><code>GET/POST /erp/purchases</code><code>/erp/suppliers</code></td>
+          <td class="flagcell"><span class="pill orphan">Orphaned</span></td></tr>
+
+          <tr><td><span class="name">Legacy CRM</span><span class="route">/dashboard/crm</span></td>
+          <td class="purpose">Standalone customer list — likely superseded by Customers &amp; Jobs' Customers tab</td>
+          <td class="eps"><code>GET /crm/customers</code><code>PATCH /crm/vehicles/:id</code></td>
+          <td class="flagcell"><span class="pill orphan">Orphaned</span></td></tr>
+
+          <tr><td><span class="name">Wallet</span><span class="route">/dashboard/wallet</span></td>
+          <td class="purpose">Petty cash wallet balance/topup/spend</td>
+          <td class="eps"><code>GET/POST /wallet</code><code>/topup</code><code>/spend</code></td>
+          <td class="flagcell"><span class="pill orphan">Orphaned</span><span class="pill sens">Sensitive</span></td></tr>
+
+          <tr><td><span class="name">Agreements</span><span class="route">/dashboard/agreements</span></td>
+          <td class="purpose">Employee agreement e-signature workflow</td>
+          <td class="eps"><code>GET/POST /agreements</code><code>PATCH /:id/sign-owner</code><code>/sign-employee</code></td>
+          <td class="flagcell"><span class="pill orphan">Orphaned</span><span class="pill sens">Sensitive</span></td></tr>
+
+          <tr><td><span class="name">Staff Config</span><span class="route">/dashboard/staff-config</span></td>
+          <td class="purpose">Attendance cutoffs + salary override — duplicates Employees→Configure</td>
+          <td class="eps"><code>GET/PUT /staff-config/:userId</code><code>/salary-history</code></td>
+          <td class="flagcell"><span class="pill orphan">Orphaned</span><span class="pill sens">Sensitive</span></td></tr>
+
+          <tr><td><span class="name">Chat</span><span class="route">/dashboard/chat</span></td>
+          <td class="purpose">Dead stub — 5-line file that only redirects to <code class="mono">/dashboard/tasks</code></td>
+          <td class="eps"><code>none</code></td>
+          <td class="flagcell"><span class="pill orphan">Dead redirect</span></td></tr>
+
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="group" id="notes">
+    <div class="group-head"><h2>Role-gating &amp; the mobile recommendation</h2></div>
+
+    <div class="callout">
+      <h3>Who sees what today</h3>
+      <p><b>OWNER</b> sees everything. <b>STORE_MANAGER</b> sees everything except a few OWNER-private entries (Devices / App Policies / Device Alerts / Live Location are HR + OWNER + STORE_MANAGER only).</p>
+      <p>Field/ops roles — <b>SALES, TECHNICIAN, SOCIAL_MEDIA, STAFF, HOUSEKEEPING</b> — see a narrow slice: Overview, Attendance (own), My Salary, My Finance, Tasks, Personal Info, plus role extras (SALES additionally gets Customers &amp; Jobs, New Entry, Invoices, Inventory-view, Job Tracker, Conversations, Calls; TECHNICIAN gets Job Tracker).</p>
+      <p>Desk-only roles — <b>HR, ACCOUNTING, CASHIER, TECH_TEAM, INVENTORY_MANAGER</b> — get the finance/payroll/inventory-admin surfaces.</p>
+      <p><b>Legal Documents</b> is gated by a server-side <code class="mono">hasLegalAccess</code> flag on a specific user, not by role — nobody gets it by default.</p>
+    </div>
+
+    <div class="callout">
+      <h3>Suggested v1 build order</h3>
+      <p>Start from <b>Build first</b> (19 screens) — that's already a full field-ops app: leads/jobs, attendance, tasks, team chat, invoicing, expenses. Bring in <b>My Salary / My Finance / Personal Info / Calls</b> once there's an explicit answer on device security (PIN/biometric re-auth gate, no offline cache of the sensitive fields, etc.). Leave the 32 desk-only screens off mobile entirely for now — nobody's asking to run payroll from a phone.</p>
+      <p>Before anything else: confirm with whoever owns the dashboard whether the 6 orphaned routes are dead code to ignore, or real features someone forgot to link — <b>Wallet</b>, <b>Agreements</b>, and <b>Staff Config</b> in particular carry real sensitive data and shouldn't get silently ported into the mobile stub sweep just because they showed up in this scan.</p>
+    </div>
+  </section>
+
+  <footer>
+    Compiled by reading <code class="mono">frontend/src/components/layout/Sidebar.tsx</code>, <code class="mono">backend/src/lib/defaultPermissions.ts</code>, and every route under <code class="mono">frontend/src/app/(dashboard)/dashboard</code> — read-only, no changes made to the dashboard repo.
+  </footer>
+
+</div>

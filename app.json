@@ -1,0 +1,71 @@
+{
+  "expo": {
+    "name": "fasttracks-mobile",
+    "slug": "fasttracks-mobile",
+    "owner": "fasttrackscarcare",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "fasttracksmobile",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "icon": "./assets/expo.icon",
+      "bundleIdentifier": "com.anonymous.fasttracksmobile",
+      "supportsTablet": false
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F6F5F5",
+        "foregroundImage": "./assets/images/brand-logo-icon.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "in.fasttrackscarcare.mobile",
+      "googleServicesFile": "./google-services.json",
+      "versionCode": 3
+    },
+    "web": {
+      "output": "static",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#F6F5F5",
+          "image": "./assets/images/brand-logo-icon.png",
+          "imageWidth": 90
+        }
+      ],
+      "expo-secure-store",
+      "expo-font",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/brand-logo-icon.png",
+          "color": "#7A1C2E"
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Fasttracks to access your photos to attach documentation.",
+          "cameraPermission": "Allow Fasttracks to use your camera to attach documentation."
+        }
+      ],
+      "expo-sharing",
+      "@react-native-community/datetimepicker"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "916fe1fe-ce56-4e1f-a763-2331adaa9795"
+      }
+    }
+  }
+}
