@@ -1,6 +1,7 @@
 import { Stack } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Linking, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { openExternalUrl } from '@/lib/open-url';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -288,7 +289,7 @@ export default function CallsScreen() {
                       <ActivityIndicator size="small" />
                     ) : expandedData ? (
                       <View style={styles.recordingDetail}>
-                        <Pressable onPress={() => Linking.openURL(expandedData.audioUrl)} style={styles.playButton}>
+                        <Pressable onPress={() => openExternalUrl(expandedData.audioUrl)} style={styles.playButton}>
                           <ThemedText style={styles.playButtonLabel}>Open recording</ThemedText>
                         </Pressable>
                         {expandedData.transcriptText ? (

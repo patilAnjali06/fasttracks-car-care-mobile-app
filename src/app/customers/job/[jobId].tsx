@@ -1,6 +1,7 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, Linking, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { openExternalUrl } from '@/lib/open-url';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { GlassCard } from '@/components/home/glass-card';
@@ -621,7 +622,7 @@ export default function JobCardDetailScreen() {
             <View style={styles.mediaGrid}>
               {media.map((m) => (
                 <View key={m.id} style={styles.mediaItem}>
-                  <Pressable onPress={() => Linking.openURL(m.url)}>
+                  <Pressable onPress={() => openExternalUrl(m.url)}>
                     {m.type === 'image' ? <Image source={{ uri: m.url }} style={styles.mediaThumb} /> : <View style={[styles.mediaThumb, styles.mediaPlaceholder]}><ThemedText type="small">Video</ThemedText></View>}
                   </Pressable>
                   {canDeleteMedia && (

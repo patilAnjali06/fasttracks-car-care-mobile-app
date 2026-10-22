@@ -4,12 +4,14 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { tokenStorage } from '@/lib/token-storage';
 import type {
   ApiEnvelope,
+  AppNotification,
   AttendanceRecord,
   Conversation,
   ConversationMessage,
   CustomerListResponse,
   CustomerProfile,
   CustomerRemark,
+  NotificationListPage,
   JobCard,
   JobCardDetail,
   JobCardEdit,
@@ -191,6 +193,8 @@ import type {
   BankBalanceHistoryEntry,
   EmailCheckState,
   EmailCheckLogEntry,
+  OnboardingChecklist,
+  OnboardingOverviewItem,
 } from '@/types/api';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -457,6 +461,26 @@ export const TASK_NOTIFICATION_TYPES = ['WORK_DOC_REPLY', 'TIMESHEET_MENTION', '
 /** Optional `types` scopes the clear to just those types, leaving other unread notifications alone. */
 export async function markNotificationsRead(types?: string[]) {
   await api.patch('/notifications/mark-all-read', {}, { params: { types: types?.join(',') } });
+}
+
+/** Newest first. Page-based (`page`/`limit`, limit capped at 50 server-side), not cursor-based. */
+export async function fetchNotifications(params: { page?: number; limit?: number; isRead?: boolean; types?: string[] } = {}) {
+  const { data } = await api.get<ApiEnvelope<NotificationListPage>>('/notifications', {
+    params: { page: params.page, limit: params.limit, isRead: params.isRead, types: params.types?.join(',') },
+  });
+  return data.data;
+}
+
+export async function fetchNotificationCount(types?: string[]) {
+  const { data } = await api.get<ApiEnvelope<{ unreadCount: number }>>('/notifications/count', {
+    params: { types: types?.join(',') },
+  });
+  return data.data.unreadCount;
+}
+
+export async function markNotificationRead(id: string) {
+  const { data } = await api.patch<ApiEnvelope<AppNotification>>(`/notifications/${id}/read`);
+  return data.data;
 }
 
 // Standing (recurring) tasks — distinct from the one-off Task above.
@@ -1281,6 +1305,23 @@ export async function decideLeaveRequest(id: string, decision: 'APPROVED' | 'REJ
     decision,
     rejectionReason,
   });
+  return data.data;
+}
+
+// ── HR Onboarding checklists — the whole /hr router is gated server-side by
+// requireHROrOwner (OWNER/STORE_MANAGER/HR/ACCOUNTING).
+export async function fetchOnboardingOverview() {
+  const { data } = await api.get<ApiEnvelope<OnboardingOverviewItem[]>>('/hr/onboarding');
+  return data.data;
+}
+
+export async function fetchOnboardingChecklist(userId: string) {
+  const { data } = await api.get<ApiEnvelope<OnboardingChecklist>>(`/hr/onboarding/${userId}`);
+  return data.data;
+}
+
+export async function setOnboardingTaskDone(taskId: string, isDone: boolean) {
+  const { data } = await api.patch<ApiEnvelope<OnboardingChecklist>>(`/hr/onboarding/task/${taskId}`, { isDone });
   return data.data;
 }
 

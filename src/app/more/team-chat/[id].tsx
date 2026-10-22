@@ -1,6 +1,7 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Linking, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { openExternalUrl } from '@/lib/open-url';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -229,7 +230,7 @@ export default function TeamChatThreadScreen() {
                           </Pressable>
                         )}
                         {item.mediaUrl && item.mediaType?.startsWith('image/') && (
-                          <Pressable onPress={() => item.mediaUrl && Linking.openURL(item.mediaUrl)}>
+                          <Pressable onPress={() => item.mediaUrl && openExternalUrl(item.mediaUrl)}>
                             <Image source={{ uri: item.mediaUrl }} style={styles.mediaImage} />
                           </Pressable>
                         )}

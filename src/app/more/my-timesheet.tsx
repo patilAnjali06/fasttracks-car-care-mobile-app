@@ -15,6 +15,7 @@ import {
   useWindowDimensions,
   View,
 } from 'react-native';
+import { openExternalUrl } from '@/lib/open-url';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
@@ -901,7 +902,7 @@ export default function MyTimesheetScreen() {
                   )}
                   {doc.files.map((f) => (
                     <View key={f.id} style={styles.fileRow}>
-                      <Pressable onPress={() => Linking.openURL(f.url)} style={styles.flex1}>
+                      <Pressable onPress={() => openExternalUrl(f.url)} style={styles.flex1}>
                         {f.mimeType.startsWith('image/') ? (
                           <Image source={{ uri: f.url }} style={{ width: thumbWidth, height: thumbHeight, borderRadius: Spacing.two, marginTop: Spacing.one }} />
                         ) : (

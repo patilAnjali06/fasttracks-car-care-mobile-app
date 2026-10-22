@@ -2,7 +2,6 @@
   "expo": {
     "name": "fasttracks-mobile",
     "slug": "fasttracks-mobile",
-    "owner": "fasttrackscarcare",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -22,7 +21,10 @@
       "predictiveBackGestureEnabled": false,
       "package": "in.fasttrackscarcare.mobile",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 3
+      "versionCode": 3,
+      "permissions": [
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "output": "static",
@@ -64,8 +66,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "916fe1fe-ce56-4e1f-a763-2331adaa9795"
+        "projectId": "9b5b2611-cbc0-4456-980b-06961063afb9"
       }
-    }
+    },
+    "owner": "patilanjali"
   }
 }

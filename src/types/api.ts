@@ -1068,6 +1068,34 @@ export type IdentityDocType =
   | 'PASSPORT' | 'DRIVING_LICENCE' | 'VOTER_ID' | 'LAST_SALARY_SLIP' | 'BANK_ACCOUNT' | 'CV'
   | 'EDUCATION_CERTIFICATE' | 'EXPERIENCE_LETTER';
 
+// HR onboarding checklist — shape of ONBOARDING_SELECT in backend/src/routes/hr.ts.
+export interface OnboardingTask {
+  id: string;
+  checklistId: string;
+  title: string;
+  description: string | null;
+  responsible: string | null;
+  sortOrder: number;
+  isDone: boolean;
+  doneAt: string | null;
+  doneById: string | null;
+}
+
+export interface OnboardingChecklist {
+  id: string;
+  userId: string;
+  createdAt: string;
+  completedAt: string | null;
+  createdBy: { id: string; name: string };
+  user: { id: string; name: string; employeeId: string | null; designation: string | null; joiningDate: string | null };
+  tasks: OnboardingTask[];
+}
+
+export interface OnboardingOverviewItem extends OnboardingChecklist {
+  totalTasks: number;
+  completedTasks: number;
+}
+
 // Matches Prisma's LeaveType enum exactly (backend/prisma/schema.prisma).
 export type LeaveType = 'SICK' | 'PERSONAL' | 'EMERGENCY';
 export type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -2552,3 +2580,19 @@ export interface CreateQuotationInput {
 }
 
 export type UpdateQuotationInput = Partial<CreateQuotationInput> & { status?: QuotationStatus };
+
+// GET /notifications (backend/src/routes/notifications.ts) — page-based, not cursor-based.
+// `metadata.link` is a dashboard web path (e.g. '/dashboard/my-tasks'), when the row has a target.
+export interface AppNotification {
+  id: string;
+  userId: string | null;
+  type: string;
+  message: string;
+  isRead: boolean;
+  metadata: { link?: string; [key: string]: unknown } | null;
+  createdAt: string;
+}
+
+export interface NotificationListPage extends PaginatedResponse<AppNotification> {
+  totalPages: number;
+}

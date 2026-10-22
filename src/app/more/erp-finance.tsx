@@ -72,7 +72,12 @@ function presetToDateRange(preset: string, pickMonth: number, pickYear: number, 
 
 function csvCell(value: string | number): string {
   const s = String(value);
-  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  // Guard against CSV/formula injection: text beginning with = + - @ (or a
+  // leading tab/CR) is executed as a formula by Excel/Sheets. Only string
+  // values can carry this, so prefix them with ' to keep them plain text;
+  // numeric values (including negatives) are left untouched.
+  const safe = typeof value === 'string' && /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
+  return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 async function shareCsv(filename: string, rows: (string | number)[][]) {
   const csv = rows.map((row) => row.map(csvCell).join(',')).join('\r\n');
