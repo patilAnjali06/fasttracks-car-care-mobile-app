@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { DocumentsSection } from '@/components/applications/documents-section';
 import { InterviewSection } from '@/components/applications/interview-section';
 import { GlassCard } from '@/components/home/glass-card';
 import { ThemedText } from '@/components/themed-text';
@@ -381,6 +382,8 @@ export default function ApplicationsScreen() {
           )}
           {actionError && <ThemedText style={styles.error}>{actionError}</ThemedText>}
           {notice && <ThemedText style={styles.notice}>{notice}</ThemedText>}
+
+          <DocumentsSection application={selected} />
 
           <ThemedText type="smallBold">Candidate invite</ThemedText>
           {inviteInfoError ? (

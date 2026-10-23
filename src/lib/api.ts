@@ -2167,6 +2167,37 @@ export async function downloadPayslipPdf(id: string, month: number, year: number
   return { uri: result.uri, filename };
 }
 
+// Applicant documents (résumé / Aadhaar image / salary slip) — each endpoint
+// streams raw bytes behind the Bearer token (requireHROrOwner) and 404s when
+// that document wasn't uploaded. Same download-to-cache approach as
+// downloadPayslipPdf, plus a status check: downloadAsync resolves even on a
+// 404/500, which would otherwise save the JSON error body as the "file".
+export type ApplicationFileKind = 'resume' | 'aadhaar-image' | 'salary-slip';
+
+export async function downloadApplicationFile(
+  id: string,
+  kind: ApplicationFileKind,
+  serverFilename?: string | null,
+): Promise<{ uri: string; filename: string }> {
+  const token = await tokenStorage.get();
+  // Keep the server's name (it carries the real extension) but strip anything
+  // that isn't safe in a path, and prefix kind+id so two applicants' files
+  // never collide in the cache.
+  const safe = (serverFilename ?? kind).replace(/[^\w.\-]+/g, '_');
+  const filename = `application-${kind}-${id}-${safe}`;
+  const dest = `${FileSystem.cacheDirectory}${filename}`;
+  const result = await FileSystem.downloadAsync(`${API_BASE_URL}/applications/${id}/${kind}`, dest, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (result.status < 200 || result.status >= 300) {
+    await FileSystem.deleteAsync(result.uri, { idempotent: true }).catch(() => {});
+    throw new Error(
+      result.status === 404 ? 'This document is no longer available.' : `Could not download the file (error ${result.status}).`,
+    );
+  }
+  return { uri: result.uri, filename: serverFilename || filename };
+}
+
 export async function setEmployeeSalary(userId: string, newSalary: number) {
   const { data } = await api.put<ApiEnvelope<unknown>>(`/staff-config/${userId}/salary`, { newSalary });
   return data.data;

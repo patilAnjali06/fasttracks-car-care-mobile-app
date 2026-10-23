@@ -1089,6 +1089,13 @@ export interface Application {
   permanentAddress: string | null;
   fresher: boolean | null;
   convertedUserId: string | null;
+  // Uploaded documents — a null filename means that document doesn't exist.
+  resumeFilename: string | null;
+  resumeMimeType: string | null;
+  aadhaarImageFilename: string | null;
+  aadhaarImageMimeType: string | null;
+  salarySlipFilename: string | null;
+  salarySlipMimeType: string | null;
   createdBy: { id: string; name: string };
   createdAt: string;
   updatedAt: string;
