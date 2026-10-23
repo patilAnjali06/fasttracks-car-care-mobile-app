@@ -1,3 +1,4 @@
+import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { Stack } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -26,23 +27,98 @@ type SortKey = 'date' | 'duration' | 'person';
 // SALES never gets a usable callRecordingId from this list (calls.ts's own
 // comment: SALES's "own" grant on calls:recording.listen only resolves for
 // a specific resource, never this global list).
-// CORRECTED 2026-09-28 (re-verification sweep): playback, sort, date-range
-// filter, and the calling-not-configured banner were all previously
-// missing, framed as deliberate scope cuts. expo-av is still not installed
-// in this project, so "in-app <audio> element" isn't literally replicable —
-// but Linking.openURL(audioUrl) (same externally-hosted-file pattern used
-// elsewhere in this app for identity documents/legal case files) gives a
-// real, working listen action without a new native dependency, so that's
-// no longer a valid reason to skip it entirely. Sort and date-range are
-// plain client-side filters, no dependency blocker at all.
+// Playback is in-app via expo-audio (RecordingPlayer below); "Open in
+// browser" (openExternalUrl) remains as the fallback if the player fails.
 const VIEW_ROLES = ['OWNER', 'STORE_MANAGER', 'SALES'];
 const RECORDING_ROLES = ['OWNER', 'STORE_MANAGER'];
 
+// expo-audio has no error event on the status, so a source that never reaches
+// isLoaded within this window is treated as a playback failure.
+const LOAD_TIMEOUT_MS = 15000;
+
 function formatDuration(seconds: number | null) {
   if (seconds == null) return '—';
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
+  const total = Math.floor(seconds);
+  const m = Math.floor(total / 60);
+  const s = total % 60;
   return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+// Mounted only while a row is expanded, so collapsing the row or expanding a
+// different one unmounts it — useAudioPlayer releases the player on unmount,
+// which stops playback. Keyed by audioUrl so a new source gets a fresh player.
+function RecordingPlayer({ audioUrl }: { audioUrl: string }) {
+  const theme = useTheme();
+  const player = useAudioPlayer(audioUrl);
+  const status = useAudioPlayerStatus(player);
+  const [timedOut, setTimedOut] = useState(false);
+  const [barWidth, setBarWidth] = useState(0);
+
+  useEffect(() => {
+    setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (status.isLoaded) return;
+    const t = setTimeout(() => setTimedOut(true), LOAD_TIMEOUT_MS);
+    return () => clearTimeout(t);
+  }, [status.isLoaded]);
+
+  const failed = timedOut && !status.isLoaded;
+  const loading = !status.isLoaded && !failed;
+  const duration = status.duration > 0 ? status.duration : 0;
+  const progress = duration ? Math.min(status.currentTime / duration, 1) : 0;
+
+  const togglePlay = () => {
+    if (status.playing) {
+      player.pause();
+      return;
+    }
+    // Replay from the start once it has finished.
+    if (duration && status.currentTime >= duration - 0.25) player.seekTo(0);
+    player.play();
+  };
+
+  const onSeek = (x: number) => {
+    if (!duration || !barWidth) return;
+    player.seekTo(Math.max(0, Math.min(x / barWidth, 1)) * duration);
+  };
+
+  if (failed) {
+    return (
+      <View style={styles.playerWrap}>
+        <ThemedText type="small" style={styles.playerError}>Couldn&apos;t play this recording in the app.</ThemedText>
+        <Pressable onPress={() => openExternalUrl(audioUrl)} style={styles.playButton}>
+          <ThemedText style={styles.playButtonLabel}>Open in browser</ThemedText>
+        </Pressable>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.playerWrap}>
+      <View style={styles.playerRow}>
+        <Pressable onPress={togglePlay} disabled={loading} style={[styles.playButton, loading && styles.playButtonDisabled]}>
+          {loading ? (
+            <ActivityIndicator size="small" color="#ffffff" />
+          ) : (
+            <ThemedText style={styles.playButtonLabel}>{status.playing ? 'Pause' : 'Play'}</ThemedText>
+          )}
+        </Pressable>
+        <ThemedText type="small" themeColor="textSecondary">
+          {loading ? 'Loading…' : status.isBuffering && status.playing ? 'Buffering…' : `${formatDuration(status.currentTime)} / ${formatDuration(duration)}`}
+        </ThemedText>
+      </View>
+      <Pressable
+        disabled={loading}
+        onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
+        onPress={(e) => onSeek(e.nativeEvent.locationX)}
+        hitSlop={{ top: Spacing.two, bottom: Spacing.two }}
+        style={[styles.progressTrack, { backgroundColor: theme.background }]}>
+        <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: theme.primary }]} />
+      </Pressable>
+    </View>
+  );
 }
 
 export default function CallsScreen() {
@@ -289,9 +365,7 @@ export default function CallsScreen() {
                       <ActivityIndicator size="small" />
                     ) : expandedData ? (
                       <View style={styles.recordingDetail}>
-                        <Pressable onPress={() => openExternalUrl(expandedData.audioUrl)} style={styles.playButton}>
-                          <ThemedText style={styles.playButtonLabel}>Open recording</ThemedText>
-                        </Pressable>
+                        <RecordingPlayer key={expandedData.audioUrl} audioUrl={expandedData.audioUrl} />
                         {expandedData.transcriptText ? (
                           <ThemedText type="small" themeColor="textSecondary">{expandedData.transcriptText}</ThemedText>
                         ) : (
@@ -335,5 +409,11 @@ const styles = StyleSheet.create({
   recordingDetail: { gap: Spacing.one, marginTop: Spacing.one, paddingTop: Spacing.one, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(127,127,127,0.2)' },
   playButton: { alignSelf: 'flex-start', paddingHorizontal: Spacing.two, paddingVertical: Spacing.one, borderRadius: Spacing.two, backgroundColor: '#7A1C2E' },
   playButtonLabel: { color: '#ffffff', fontWeight: '600' },
+  playButtonDisabled: { opacity: 0.6, minWidth: 64, alignItems: 'center' },
+  playerWrap: { gap: Spacing.two },
+  playerRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
+  playerError: { color: '#B83030' },
+  progressTrack: { height: 8, borderRadius: 4, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 4 },
   italic: { fontStyle: 'italic' },
 });
