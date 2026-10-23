@@ -5,7 +5,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AiScreeningSection } from '@/components/applications/ai-screening-section';
 import { CompareView } from '@/components/applications/compare-view';
+import { AiInterviewInviteSection } from '@/components/applications/ai-interview-invite-section';
 import { InviteLinkCard } from '@/components/applications/invite-link-card';
+import { inviteStatusLabel } from '@/components/applications/invite-status';
 import { PracticalQuestionsSection } from '@/components/applications/practical-questions-section';
 import { DocumentsSection } from '@/components/applications/documents-section';
 import { InterviewSection } from '@/components/applications/interview-section';
@@ -32,15 +34,6 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 // converted, and an email on file. The server re-checks all three.
 function canResendInvite(a: Application) {
   return (a.status === 'APPLIED' || a.status === 'AI_SCREENING') && !a.convertedUserId && !!a.email?.trim();
-}
-
-function inviteStatusLabel(inv: ApplicationInvite) {
-  if (inv.status === 'USED') return `Used ${fmtDate(inv.usedAt)}`;
-  if (inv.status === 'REVOKED') return 'Replaced by a newer invite';
-  if (inv.status === 'EXPIRED' || (inv.status === 'PENDING' && new Date(inv.expiresAt) < new Date())) {
-    return `Expired ${fmtDate(inv.expiresAt)}`;
-  }
-  return `Pending — expires ${fmtDate(inv.expiresAt)}`;
 }
 
 
@@ -400,6 +393,8 @@ export default function ApplicationsScreen() {
             </Pressable>
           )}
           {resendResult && <InviteLinkCard message={resendResult.message} link={resendResult.link} />}
+
+          <AiInterviewInviteSection application={selected} />
 
           <PracticalQuestionsSection application={selected} />
 

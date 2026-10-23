@@ -206,6 +206,7 @@ import type {
   PracticalQuestion,
   PracticalQuestionsData,
   SendAssessmentResult,
+  InterviewInviteResult,
 } from '@/types/api';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -1395,6 +1396,26 @@ export async function fetchRoleCoverage() {
 // Read-only; no AI call. Excludes REJECTED and converted applications.
 export async function fetchCandidateComparison(role: string) {
   const { data } = await api.get<ApiEnvelope<CompareCandidate[]>>('/applications/compare', { params: { role } });
+  return data.data;
+}
+
+// AI interview invite (AI_INTERVIEW stage) — EMAILS the candidate a personal
+// link. Needs status AI_INTERVIEW, roleApplied, not converted, and an approved
+// competency template for the role; the server answers 400 with
+// `noLiveTemplate: true` (read it off err.response.data) when there's none.
+// Resending revokes the previous pending invite. Question generation can be an
+// LLM call, hence the 120s ceiling.
+export async function sendInterviewInvite(id: string, expiresInHours: number) {
+  const { data } = await api.post<ApiEnvelope<InterviewInviteResult>>(
+    `/applications/${id}/interview-invite`,
+    { expiresInHours },
+    { timeout: 120000 },
+  );
+  return { ...data.data, message: data.message };
+}
+
+export async function fetchInterviewInvite(id: string) {
+  const { data } = await api.get<ApiEnvelope<ApplicationInvite | null>>(`/applications/${id}/interview-invite`);
   return data.data;
 }
 

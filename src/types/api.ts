@@ -1150,6 +1150,19 @@ export interface RoleCoverage {
   hasLiveTemplate: boolean;
 }
 
+// POST /:id/interview-invite. inviteLink is the only way to reach the candidate
+// when emailSent is false (the server won't show it again).
+export interface InterviewInviteResult {
+  id: string;
+  expiresAt: string;
+  createdAt: string;
+  inviteLink: string;
+  emailSent: boolean;
+  sentTo: string | null;
+  hasEmail: boolean;
+  message?: string;
+}
+
 // Practical Assessment questions (backend PracticalQuestion model + the
 // /:id/practical-questions routes). assessmentInviteId non-null = already sent
 // to the candidate: locked against edit/delete/approve.
