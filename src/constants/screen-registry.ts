@@ -383,6 +383,16 @@ export const SCREEN_REGISTRY: ScreenMeta[] = [
     route: '/more/onboarding',
   },
   {
+    id: 'applications',
+    title: 'Applications',
+    dashboardRoute: '/dashboard/applications',
+    purpose: 'Job applicants — list, filter by stage, view details, move through the pipeline.',
+    endpoints: ['GET /applications', 'GET /applications/:id', 'PATCH /applications/:id/status'],
+    note: 'router.use(verifyToken, requireHROrOwner) = OWNER/STORE_MANAGER/HR/ACCOUNTING (backend/src/routes/applications.ts + middleware/auth.ts) — static role check, visibleToRoles mirrors it. Core subset only: resume view, AI screening/interview/assessment, scheduling, invites and outcome emails are not mirrored. PATCH status to SELECTED creates a candidate record (confirmed in-app first); an already-converted application cannot change status (server 400, surfaced as-is). AI_SCREENING also makes the server email the applicant a verification invite when an email is on file.',
+    visibleToRoles: ['OWNER', 'STORE_MANAGER', 'HR', 'ACCOUNTING'],
+    route: '/more/applications',
+  },
+  {
     id: 'notifications',
     title: 'Notifications',
     dashboardRoute: '/dashboard/notifications',

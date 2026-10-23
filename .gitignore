@@ -43,3 +43,6 @@ example
 # generated native folders
 /ios
 /android
+FastTracks_Mobile_Test_Cases.xlsx
+app.json.bak
+package.json.bak

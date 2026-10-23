@@ -1068,6 +1068,32 @@ export type IdentityDocType =
   | 'PASSPORT' | 'DRIVING_LICENCE' | 'VOTER_ID' | 'LAST_SALARY_SLIP' | 'BANK_ACCOUNT' | 'CV'
   | 'EDUCATION_CERTIFICATE' | 'EXPERIENCE_LETTER';
 
+// HR applications (ATS) — core subset of APPLICATION_SELECT in
+// backend/src/routes/applications.ts, as returned by maskApplication. Statuses
+// are the backend's STATUSES array.
+export type ApplicationStatus =
+  | 'APPLIED' | 'AI_SCREENING' | 'AI_INTERVIEW' | 'ASSESSMENT' | 'MANAGER_INTERVIEW' | 'SELECTED' | 'REJECTED';
+
+export interface Application {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  roleApplied: string | null;
+  department: string | null;
+  status: ApplicationStatus;
+  notes: string | null;
+  dateOfBirth: string | null;
+  age: number | null;
+  currentAddress: string | null;
+  permanentAddress: string | null;
+  fresher: boolean | null;
+  convertedUserId: string | null;
+  createdBy: { id: string; name: string };
+  createdAt: string;
+  updatedAt: string;
+}
+
 // HR onboarding checklist — shape of ONBOARDING_SELECT in backend/src/routes/hr.ts.
 export interface OnboardingTask {
   id: string;

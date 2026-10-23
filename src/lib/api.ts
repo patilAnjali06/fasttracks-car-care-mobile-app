@@ -195,6 +195,8 @@ import type {
   EmailCheckLogEntry,
   OnboardingChecklist,
   OnboardingOverviewItem,
+  Application,
+  ApplicationStatus,
 } from '@/types/api';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -1323,6 +1325,27 @@ export async function fetchOnboardingChecklist(userId: string) {
 export async function setOnboardingTaskDone(taskId: string, isDone: boolean) {
   const { data } = await api.patch<ApiEnvelope<OnboardingChecklist>>(`/hr/onboarding/task/${taskId}`, { isDone });
   return data.data;
+}
+
+// ── HR Applications (ATS) — /applications is gated server-side by
+// requireHROrOwner (OWNER/STORE_MANAGER/HR/ACCOUNTING). Responses are masked
+// (Aadhaar/PAN/bank only as last-4). Setting SELECTED creates a candidate
+// record server-side and returns a success message.
+export async function fetchApplications(status?: ApplicationStatus) {
+  const { data } = await api.get<ApiEnvelope<Application[]>>('/applications', {
+    params: status ? { status } : undefined,
+  });
+  return data.data;
+}
+
+export async function fetchApplication(id: string) {
+  const { data } = await api.get<ApiEnvelope<Application>>(`/applications/${id}`);
+  return data.data;
+}
+
+export async function setApplicationStatus(id: string, status: ApplicationStatus) {
+  const { data } = await api.patch<ApiEnvelope<Application>>(`/applications/${id}/status`, { status });
+  return { application: data.data, message: data.message };
 }
 
 // ── Work-docs attachments on a Timesheet — BLOCKED_ROLES=[TECHNICIAN,STAFF]

@@ -34,6 +34,7 @@ const MENU_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   overtime: 'hourglass-outline',
   'leave-requests': 'calendar-outline',
   onboarding: 'clipboard-outline',
+  applications: 'person-add-outline',
   'my-finance': 'cash-outline',
   'personal-info': 'person-outline',
   'timesheets-manager': 'time-outline',
