@@ -197,6 +197,8 @@ import type {
   OnboardingOverviewItem,
   Application,
   ApplicationStatus,
+  ApplicationInvite,
+  ApplicationInviteResult,
 } from '@/types/api';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -1346,6 +1348,27 @@ export async function fetchApplication(id: string) {
 export async function setApplicationStatus(id: string, status: ApplicationStatus) {
   const { data } = await api.patch<ApiEnvelope<Application>>(`/applications/${id}/status`, { status });
   return { application: data.data, message: data.message };
+}
+
+// Candidate invites — both POSTs email the candidate (via n8n; emailSent is
+// false when delivery fails). Resend is only valid for APPLIED/AI_SCREENING,
+// non-converted applications with an email on file (server 400 otherwise).
+export async function inviteApplicant(input: { name: string; email: string }) {
+  const { data } = await api.post<ApiEnvelope<ApplicationInviteResult & { application: Application }>>(
+    '/applications/invite',
+    input,
+  );
+  return { ...data.data, message: data.message };
+}
+
+export async function resendApplicationInvite(id: string) {
+  const { data } = await api.post<ApiEnvelope<ApplicationInviteResult>>(`/applications/${id}/invite/resend`);
+  return { ...data.data, message: data.message };
+}
+
+export async function fetchApplicationInvite(id: string) {
+  const { data } = await api.get<ApiEnvelope<ApplicationInvite | null>>(`/applications/${id}/invite`);
+  return data.data;
 }
 
 // ── Work-docs attachments on a Timesheet — BLOCKED_ROLES=[TECHNICIAN,STAFF]

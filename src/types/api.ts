@@ -1094,6 +1094,24 @@ export interface Application {
   updatedAt: string;
 }
 
+// POST /applications/invite and /:id/invite/resend. inviteLink is returned so
+// HR can send it by hand when emailSent is false.
+export interface ApplicationInviteResult {
+  inviteLink: string;
+  expiresAt: string;
+  emailSent: boolean;
+}
+
+// GET /applications/:id/invite — most recent self-service (APPLICATION) invite,
+// or null when none was ever sent. A PENDING row past expiresAt is expired.
+export interface ApplicationInvite {
+  id: string;
+  status: 'PENDING' | 'USED' | 'REVOKED' | 'EXPIRED';
+  expiresAt: string;
+  createdAt: string;
+  usedAt: string | null;
+}
+
 // HR onboarding checklist — shape of ONBOARDING_SELECT in backend/src/routes/hr.ts.
 export interface OnboardingTask {
   id: string;
