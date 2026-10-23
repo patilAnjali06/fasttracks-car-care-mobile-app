@@ -35,6 +35,7 @@ const MENU_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   'leave-requests': 'calendar-outline',
   onboarding: 'clipboard-outline',
   analytics: 'analytics-outline',
+  competencies: 'ribbon-outline',
   applications: 'person-add-outline',
   'my-finance': 'cash-outline',
   'personal-info': 'person-outline',

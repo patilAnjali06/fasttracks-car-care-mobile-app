@@ -2816,3 +2816,45 @@ export interface RetentionAnalytics {
   earliestTrackedDeparture: string | null;
   reasonBreakdown: { reason: string; count: number }[];
 }
+
+// Role competency templates (backend/src/routes/competencyTemplates.ts,
+// TEMPLATE_SELECT). The list returns one row per role — the current version.
+export type CompetencyTemplateStatus = 'DRAFT' | 'APPROVED';
+export type CompetencyCategory = 'WORKSHOP' | 'CUSTOMER_SALES' | 'OFFICE_ADMIN' | 'TECH_IT';
+
+export interface RoleCompetency {
+  id: string;
+  name: string;
+  description: string | null;
+  weightage: number;
+  sortOrder: number;
+  whatToAssess: string | null;
+  ratingGuide: string | null;
+}
+
+export interface CompetencyTemplate {
+  id: string;
+  roleName: string;
+  version: number;
+  isCurrent: boolean;
+  status: CompetencyTemplateStatus;
+  source: 'MANUAL' | 'AI_SUGGESTED';
+  // Non-null = the whole role (every version) is archived.
+  archivedAt: string | null;
+  category: CompetencyCategory | null;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: { id: string; name: string } | null;
+  updatedBy: { id: string; name: string } | null;
+  competencies: RoleCompetency[];
+}
+
+// GET /competency-templates adds these two; GET /:id and the lifecycle
+// responses don't carry them.
+export interface CompetencyTemplateListItem extends CompetencyTemplate {
+  // Distinct applications that used any version of this role's template.
+  usageCount: number;
+  // What to badge: a DRAFT current row whose role still has a live APPROVED
+  // version reads APPROVED (the role is still hireable).
+  liveStatus: CompetencyTemplateStatus;
+}

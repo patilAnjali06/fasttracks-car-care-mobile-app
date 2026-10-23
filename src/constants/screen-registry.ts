@@ -403,6 +403,19 @@ export const SCREEN_REGISTRY: ScreenMeta[] = [
     route: '/more/analytics',
   },
   {
+    id: 'competencies',
+    title: 'Competencies',
+    dashboardRoute: '/dashboard/competencies',
+    purpose: 'Per-role competency templates behind AI interviews — view, approve, archive/restore, delete.',
+    endpoints: [
+      'GET /competency-templates', 'GET /competency-templates/:id', 'POST /competency-templates/:id/approve',
+      'POST /competency-templates/:id/archive', 'POST /competency-templates/:id/unarchive', 'DELETE /competency-templates/:id',
+    ],
+    note: 'router.use(verifyToken, requireHRModuleAccess) (backend/src/routes/competencyTemplates.ts): OWNER/STORE_MANAGER/HR/ACCOUNTING pass on role, anyone else needs the hr_module tab — gated like analytics (static roles, else PermissionGate hr_module; the menu entry is limited to the four roles). ?includeArchived=true returns ONLY archived roles, so the screen has an Active/Archived switch. Archive/unarchive/delete act on the whole role; delete is refused (409) once any interview/assessment used it. Phase 1 only: create, edit, AI suggest/regenerate and version history are not mirrored.',
+    visibleToRoles: ['OWNER', 'STORE_MANAGER', 'HR', 'ACCOUNTING'],
+    route: '/more/competencies',
+  },
+  {
     id: 'notifications',
     title: 'Notifications',
     dashboardRoute: '/dashboard/notifications',

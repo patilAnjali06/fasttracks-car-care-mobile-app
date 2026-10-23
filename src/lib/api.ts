@@ -209,6 +209,8 @@ import type {
   InterviewInviteResult,
   HiringAnalytics,
   RetentionAnalytics,
+  CompetencyTemplate,
+  CompetencyTemplateListItem,
 } from '@/types/api';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -3135,4 +3137,41 @@ export async function fetchHiringAnalytics() {
 export async function fetchRetentionAnalytics() {
   const { data } = await api.get<ApiEnvelope<RetentionAnalytics>>('/analytics/retention');
   return data.data;
+}
+
+// ── Competency templates — /competency-templates is gated server-side by
+// requireHRModuleAccess (OWNER/STORE_MANAGER/HR/ACCOUNTING, or the hr_module
+// tab). NOTE `includeArchived=true` returns ONLY the archived roles, not
+// active + archived. Archive/unarchive/delete act on the whole role (every
+// version); delete is refused with 409 once any interview/assessment used it.
+export async function fetchCompetencyTemplates(includeArchived = false) {
+  const { data } = await api.get<ApiEnvelope<CompetencyTemplateListItem[]>>('/competency-templates', {
+    params: includeArchived ? { includeArchived: true } : undefined,
+  });
+  return data.data;
+}
+
+export async function fetchCompetencyTemplate(id: string) {
+  const { data } = await api.get<ApiEnvelope<CompetencyTemplate>>(`/competency-templates/${id}`);
+  return data.data;
+}
+
+export async function approveCompetencyTemplate(id: string) {
+  const { data } = await api.post<ApiEnvelope<CompetencyTemplate>>(`/competency-templates/${id}/approve`);
+  return { template: data.data, message: data.message };
+}
+
+export async function archiveCompetencyTemplate(id: string) {
+  const { data } = await api.post<ApiEnvelope<null>>(`/competency-templates/${id}/archive`);
+  return { message: data.message };
+}
+
+export async function unarchiveCompetencyTemplate(id: string) {
+  const { data } = await api.post<ApiEnvelope<CompetencyTemplate | null>>(`/competency-templates/${id}/unarchive`);
+  return { template: data.data, message: data.message };
+}
+
+export async function deleteCompetencyTemplate(id: string) {
+  const { data } = await api.delete<ApiEnvelope<null>>(`/competency-templates/${id}`);
+  return { message: data.message };
 }
