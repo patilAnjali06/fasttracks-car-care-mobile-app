@@ -1150,6 +1150,40 @@ export interface RoleCoverage {
   hasLiveTemplate: boolean;
 }
 
+// Practical Assessment questions (backend PracticalQuestion model + the
+// /:id/practical-questions routes). assessmentInviteId non-null = already sent
+// to the candidate: locked against edit/delete/approve.
+export interface PracticalQuestion {
+  id: string;
+  applicationId: string | null;
+  assessmentInviteId: string | null;
+  questionText: string;
+  source: string;
+  sortOrder: number;
+  approvedAt: string | null;
+  approvedBy: { id: string; name: string } | null;
+  createdBy: { id: string; name: string } | null;
+  createdAt: string;
+}
+
+// GET /:id/practical-questions. `scorecard` and `recordings` are returned too
+// but not used by the mobile app yet.
+export interface PracticalQuestionsData {
+  questions: PracticalQuestion[];
+}
+
+// POST /:id/practical-questions/approve-all — sends the assessment. When the
+// email didn't go out, inviteLink is the only way to reach the candidate.
+export interface SendAssessmentResult {
+  inviteLink: string;
+  expiresAt: string;
+  questionCount: number;
+  emailSent: boolean;
+  sentTo: string | null;
+  hasEmail: boolean;
+  message?: string;
+}
+
 // Manager Interview scheduling — see services/interviewSchedule.ts
 // (resolveInterviewLocation) and APPLICATION_SELECT.interviewSchedules.
 export type InterviewLocationType = 'COMPANY' | 'ONLINE' | 'OTHER';

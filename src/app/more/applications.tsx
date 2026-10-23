@@ -1,4 +1,3 @@
-import * as Clipboard from 'expo-clipboard';
 import { Stack } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
@@ -6,6 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AiScreeningSection } from '@/components/applications/ai-screening-section';
 import { CompareView } from '@/components/applications/compare-view';
+import { InviteLinkCard } from '@/components/applications/invite-link-card';
+import { PracticalQuestionsSection } from '@/components/applications/practical-questions-section';
 import { DocumentsSection } from '@/components/applications/documents-section';
 import { InterviewSection } from '@/components/applications/interview-section';
 import { GlassCard } from '@/components/home/glass-card';
@@ -42,33 +43,6 @@ function inviteStatusLabel(inv: ApplicationInvite) {
   return `Pending — expires ${fmtDate(inv.expiresAt)}`;
 }
 
-function InviteLinkCard({ message, link }: { message?: string; link?: string }) {
-  const [copied, setCopied] = useState(false);
-  const copy = async () => {
-    if (!link) return;
-    try {
-      await Clipboard.setStringAsync(link);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      Alert.alert('Could not copy', 'Select and copy the link manually.');
-    }
-  };
-  return (
-    <GlassCard>
-      {message ? <ThemedText type="small" style={styles.notice}>{message}</ThemedText> : null}
-      {link ? (
-        <>
-          <ThemedText type="small" themeColor="textSecondary" style={styles.linkLabel}>Invite link</ThemedText>
-          <ThemedText type="small" selectable>{link}</ThemedText>
-          <Pressable onPress={copy} style={styles.button}>
-            <ThemedText style={styles.buttonLabel}>{copied ? 'Copied' : 'Copy link'}</ThemedText>
-          </Pressable>
-        </>
-      ) : null}
-    </GlassCard>
-  );
-}
 
 // Whole /applications router is router.use(verifyToken, requireHROrOwner) =
 // OWNER/STORE_MANAGER/HR/ACCOUNTING (backend/src/routes/applications.ts,
@@ -426,6 +400,8 @@ export default function ApplicationsScreen() {
             </Pressable>
           )}
           {resendResult && <InviteLinkCard message={resendResult.message} link={resendResult.link} />}
+
+          <PracticalQuestionsSection application={selected} />
 
           <InterviewSection
             application={selected}

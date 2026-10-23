@@ -203,6 +203,9 @@ import type {
   InterviewScheduleResult,
   CompareCandidate,
   RoleCoverage,
+  PracticalQuestion,
+  PracticalQuestionsData,
+  SendAssessmentResult,
 } from '@/types/api';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -1393,6 +1396,49 @@ export async function fetchRoleCoverage() {
 export async function fetchCandidateComparison(role: string) {
   const { data } = await api.get<ApiEnvelope<CompareCandidate[]>>('/applications/compare', { params: { role } });
   return data.data;
+}
+
+// Practical Assessment questions (Assessment stage). Generate is an LLM call
+// (120s ceiling like runAiScreening), needs status ASSESSMENT + roleApplied +
+// not converted, and replaces every unsent draft. Edit/delete/approve are
+// refused once a question was sent (assessmentInviteId set); editing the text
+// clears its approval. sendAssessment (approve-all) approves any still-pending
+// question, creates the invite, EMAILS the candidate and locks the questions.
+export async function fetchPracticalQuestions(id: string) {
+  const { data } = await api.get<ApiEnvelope<PracticalQuestionsData>>(`/applications/${id}/practical-questions`);
+  return data.data;
+}
+
+export async function generatePracticalQuestions(id: string) {
+  const { data } = await api.post<ApiEnvelope<PracticalQuestion[]>>(
+    `/applications/${id}/practical-questions/generate`,
+    undefined,
+    { timeout: 120000 },
+  );
+  return { questions: data.data, message: data.message };
+}
+
+export async function updatePracticalQuestion(id: string, questionId: string, body: { questionText?: string; sortOrder?: number }) {
+  const { data } = await api.patch<ApiEnvelope<PracticalQuestion>>(`/applications/${id}/practical-questions/${questionId}`, body);
+  return data.data;
+}
+
+export async function deletePracticalQuestion(id: string, questionId: string) {
+  const { data } = await api.delete<ApiEnvelope<{ deleted: boolean }>>(`/applications/${id}/practical-questions/${questionId}`);
+  return data.data;
+}
+
+export async function approvePracticalQuestion(id: string, questionId: string) {
+  const { data } = await api.post<ApiEnvelope<PracticalQuestion>>(`/applications/${id}/practical-questions/${questionId}/approve`);
+  return data.data;
+}
+
+export async function sendAssessment(id: string, expiresInHours: number) {
+  const { data } = await api.post<ApiEnvelope<SendAssessmentResult>>(
+    `/applications/${id}/practical-questions/approve-all`,
+    { expiresInHours },
+  );
+  return { ...data.data, message: data.message };
 }
 
 // Manager Interview scheduling — each of these emails the candidate and
