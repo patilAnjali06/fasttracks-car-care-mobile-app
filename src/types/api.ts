@@ -1092,6 +1092,46 @@ export interface Application {
   createdBy: { id: string; name: string };
   createdAt: string;
   updatedAt: string;
+  // Manager Interview schedules, most recent first; at most one is SCHEDULED.
+  interviewSchedules?: InterviewSchedule[];
+}
+
+// Manager Interview scheduling — see services/interviewSchedule.ts
+// (resolveInterviewLocation) and APPLICATION_SELECT.interviewSchedules.
+export type InterviewLocationType = 'COMPANY' | 'ONLINE' | 'OTHER';
+
+export interface InterviewSchedule {
+  id: string;
+  scheduledStart: string;
+  scheduledEnd: string;
+  location: string | null;
+  // null on rows saved before locationType existed.
+  locationType: InterviewLocationType | null;
+  notes: string | null;
+  status: 'SCHEDULED' | 'CANCELLED';
+  sequence: number;
+  interviewerId: string;
+  interviewer: { id: string; name: string; email: string | null };
+  createdAt: string;
+}
+
+export interface InterviewScheduleInput {
+  scheduledStart: string;
+  scheduledEnd: string;
+  interviewerId: string;
+  locationType: InterviewLocationType;
+  location: string;
+  notes?: string;
+}
+
+// Email delivery flags returned by schedule / reschedule / cancel.
+export interface InterviewScheduleResult {
+  application: Application | null;
+  candidateEmailed: boolean;
+  interviewerEmailed: boolean;
+  candidateHasEmail: boolean;
+  interviewerHasEmail: boolean;
+  message?: string;
 }
 
 // POST /applications/invite and /:id/invite/resend. inviteLink is returned so

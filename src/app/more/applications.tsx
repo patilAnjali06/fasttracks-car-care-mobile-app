@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { InterviewSection } from '@/components/applications/interview-section';
 import { GlassCard } from '@/components/home/glass-card';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -402,6 +403,11 @@ export default function ApplicationsScreen() {
             </Pressable>
           )}
           {resendResult && <InviteLinkCard message={resendResult.message} link={resendResult.link} />}
+
+          <InterviewSection
+            application={selected}
+            onApplicationChanged={(app) => setItems((list) => (list ? list.map((a) => (a.id === app.id ? app : a)) : list))}
+          />
         </ScrollView>
       </View>
     );

@@ -199,6 +199,8 @@ import type {
   ApplicationStatus,
   ApplicationInvite,
   ApplicationInviteResult,
+  InterviewScheduleInput,
+  InterviewScheduleResult,
 } from '@/types/api';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -1369,6 +1371,30 @@ export async function resendApplicationInvite(id: string) {
 export async function fetchApplicationInvite(id: string) {
   const { data } = await api.get<ApiEnvelope<ApplicationInvite | null>>(`/applications/${id}/invite`);
   return data.data;
+}
+
+// Manager Interview scheduling — each of these emails the candidate and
+// interviewer (calendar invite); the response carries per-recipient flags.
+// Schedule requires status MANAGER_INTERVIEW, not converted, and no existing
+// SCHEDULED row (server 400 otherwise).
+export async function fetchInterviewDefaults() {
+  const { data } = await api.get<ApiEnvelope<{ companyLocation: string | null }>>('/applications/interview-defaults');
+  return data.data;
+}
+
+export async function scheduleInterview(id: string, body: InterviewScheduleInput) {
+  const { data } = await api.post<ApiEnvelope<InterviewScheduleResult>>(`/applications/${id}/interview-schedule`, body);
+  return { ...data.data, message: data.message };
+}
+
+export async function rescheduleInterview(id: string, scheduleId: string, body: InterviewScheduleInput) {
+  const { data } = await api.patch<ApiEnvelope<InterviewScheduleResult>>(`/applications/${id}/interview-schedule/${scheduleId}`, body);
+  return { ...data.data, message: data.message };
+}
+
+export async function cancelInterview(id: string, scheduleId: string) {
+  const { data } = await api.post<ApiEnvelope<InterviewScheduleResult>>(`/applications/${id}/interview-schedule/${scheduleId}/cancel`);
+  return { ...data.data, message: data.message };
 }
 
 // ── Work-docs attachments on a Timesheet — BLOCKED_ROLES=[TECHNICIAN,STAFF]
