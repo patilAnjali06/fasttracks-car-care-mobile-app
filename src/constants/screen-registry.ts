@@ -393,6 +393,16 @@ export const SCREEN_REGISTRY: ScreenMeta[] = [
     route: '/more/applications',
   },
   {
+    id: 'analytics',
+    title: 'Analytics',
+    dashboardRoute: '/dashboard/analytics',
+    purpose: 'HR hiring and retention analytics — time-to-hire, rejection funnel, interview scores by role, departure reasons.',
+    endpoints: ['GET /analytics/hiring', 'GET /analytics/retention'],
+    note: 'router.use(verifyToken, requireHRModuleAccess) (backend/src/routes/analytics.ts): OWNER/STORE_MANAGER/HR/ACCOUNTING pass on role, anyone else needs the hr_module tab. The screen mirrors both (static roles, else PermissionGate hr_module). visibleToRoles lists only the four roles, so the menu entry is hidden from everyone else — an hr_module grantee in another role is still admitted if they open /more/analytics directly. Charts are plain-View bars (no chart library); the dashboard\'s axes/tooltips are not mirrored.',
+    visibleToRoles: ['OWNER', 'STORE_MANAGER', 'HR', 'ACCOUNTING'],
+    route: '/more/analytics',
+  },
+  {
     id: 'notifications',
     title: 'Notifications',
     dashboardRoute: '/dashboard/notifications',

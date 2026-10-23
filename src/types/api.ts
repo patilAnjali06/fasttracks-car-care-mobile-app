@@ -2781,3 +2781,38 @@ export interface AppNotification {
 export interface NotificationListPage extends PaginatedResponse<AppNotification> {
   totalPages: number;
 }
+
+// HR analytics (backend/src/routes/analytics.ts) — both endpoints are
+// read-only aggregates computed at request time.
+export interface HiringAnalytics {
+  totalApplications: number;
+  totalHired: number;
+  totalRejected: number;
+  // Percent (one decimal); null when there are no applications.
+  rejectionRate: number | null;
+  // null when no application has been converted yet; see timeToHireSampleSize.
+  avgTimeToHireDays: number | null;
+  timeToHireSampleSize: number;
+  // Which AI stages ran before each rejected application — there is no
+  // stage-at-rejection history, so this is the closest signal available.
+  stagesCompletedBeforeRejection: {
+    NONE: number;
+    SCREENED_ONLY: number;
+    INTERVIEWED: number;
+    ASSESSED: number;
+  };
+  // Sorted by avgScore desc; avgScore is null when every scorecard for the
+  // role was flagged (nothing to average).
+  avgScoreByRole: { role: string; avgScore: number | null; scoredCount: number; flaggedCount: number }[];
+}
+
+export interface RetentionAnalytics {
+  activeCount: number;
+  departedTrackedCount: number;
+  // Past deactivations with no departure date — counted separately, never as 0.
+  departedNoDataCount: number;
+  avgTenureDays: number | null;
+  tenureSampleSize: number;
+  earliestTrackedDeparture: string | null;
+  reasonBreakdown: { reason: string; count: number }[];
+}

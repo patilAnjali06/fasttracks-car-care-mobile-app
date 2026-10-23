@@ -207,6 +207,8 @@ import type {
   PracticalQuestionsData,
   SendAssessmentResult,
   InterviewInviteResult,
+  HiringAnalytics,
+  RetentionAnalytics,
 } from '@/types/api';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -3120,4 +3122,17 @@ export async function fetchAgreementPdfDataUri(id: string) {
   const bytes = new Uint8Array(data);
   for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
   return `data:application/pdf;base64,${base64Encode(binary)}`;
+}
+
+// ── HR Analytics — GET /analytics/* is gated server-side by
+// requireHRModuleAccess: OWNER/STORE_MANAGER/HR/ACCOUNTING, or anyone granted
+// the hr_module tab. Read-only.
+export async function fetchHiringAnalytics() {
+  const { data } = await api.get<ApiEnvelope<HiringAnalytics>>('/analytics/hiring');
+  return data.data;
+}
+
+export async function fetchRetentionAnalytics() {
+  const { data } = await api.get<ApiEnvelope<RetentionAnalytics>>('/analytics/retention');
+  return data.data;
 }
