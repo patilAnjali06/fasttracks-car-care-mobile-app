@@ -201,6 +201,8 @@ import type {
   ApplicationInviteResult,
   InterviewScheduleInput,
   InterviewScheduleResult,
+  CompareCandidate,
+  RoleCoverage,
 } from '@/types/api';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -1370,6 +1372,26 @@ export async function resendApplicationInvite(id: string) {
 
 export async function fetchApplicationInvite(id: string) {
   const { data } = await api.get<ApiEnvelope<ApplicationInvite | null>>(`/applications/${id}/invite`);
+  return data.data;
+}
+
+// AI screening reads the résumé and calls an LLM — slow, so it gets the same
+// 120s ceiling as the other AI endpoints in this file (default is 15s). Needs a
+// résumé + roleApplied and a non-converted application (server 400 otherwise);
+// writes aiScreeningResult/aiScreenedAt only, never `status`.
+export async function runAiScreening(id: string) {
+  const { data } = await api.post<ApiEnvelope<Application>>(`/applications/${id}/ai-screen`, undefined, { timeout: 120000 });
+  return data.data;
+}
+
+export async function fetchRoleCoverage() {
+  const { data } = await api.get<ApiEnvelope<RoleCoverage[]>>('/applications/role-coverage');
+  return data.data;
+}
+
+// Read-only; no AI call. Excludes REJECTED and converted applications.
+export async function fetchCandidateComparison(role: string) {
+  const { data } = await api.get<ApiEnvelope<CompareCandidate[]>>('/applications/compare', { params: { role } });
   return data.data;
 }
 

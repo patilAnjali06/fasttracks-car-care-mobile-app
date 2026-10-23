@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AiScreeningSection } from '@/components/applications/ai-screening-section';
+import { CompareView } from '@/components/applications/compare-view';
 import { DocumentsSection } from '@/components/applications/documents-section';
 import { InterviewSection } from '@/components/applications/interview-section';
 import { GlassCard } from '@/components/home/glass-card';
@@ -130,6 +132,8 @@ export default function ApplicationsScreen() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+
+  const [compareOpen, setCompareOpen] = useState(false);
 
   // Invite Candidate form
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -283,6 +287,17 @@ export default function ApplicationsScreen() {
     );
   }
 
+  if (compareOpen) {
+    return (
+      <View style={styles.flex1}>
+        <Stack.Screen options={{ title: 'Applications' }} />
+        <ScrollView contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.three }]}>
+          <CompareView statusLabels={STATUS_LABELS} onBack={() => setCompareOpen(false)} />
+        </ScrollView>
+      </View>
+    );
+  }
+
   if (inviteOpen) {
     return (
       <View style={styles.flex1}>
@@ -385,6 +400,11 @@ export default function ApplicationsScreen() {
 
           <DocumentsSection application={selected} />
 
+          <AiScreeningSection
+            application={selected}
+            onApplicationChanged={(app) => setItems((list) => (list ? list.map((a) => (a.id === app.id ? app : a)) : list))}
+          />
+
           <ThemedText type="smallBold">Candidate invite</ThemedText>
           {inviteInfoError ? (
             <View>
@@ -423,9 +443,14 @@ export default function ApplicationsScreen() {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.three }]}
         refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
       >
-        <Pressable onPress={() => { setInviteOpen(true); setInviteResult(null); setInviteError(null); }} style={styles.inviteButton}>
-          <ThemedText style={styles.buttonLabel}>+ Invite Candidate</ThemedText>
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable onPress={() => { setInviteOpen(true); setInviteResult(null); setInviteError(null); }} style={styles.inviteButton}>
+            <ThemedText style={styles.buttonLabel}>+ Invite Candidate</ThemedText>
+          </Pressable>
+          <Pressable onPress={() => setCompareOpen(true)} style={[styles.inviteButton, styles.compareButton]}>
+            <ThemedText style={styles.buttonLabel}>Compare</ThemedText>
+          </Pressable>
+        </View>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false}>
           <Pressable onPress={() => setFilter(null)} style={[styles.chip, styles.chipGap, { backgroundColor: filter === null ? theme.primary : theme.backgroundElement }]}>
@@ -481,6 +506,8 @@ const styles = StyleSheet.create({
   notice: { color: '#167A48', marginTop: Spacing.one },
   button: { marginTop: Spacing.two, height: 48, borderRadius: Spacing.two, backgroundColor: '#7A1C2E', alignItems: 'center', justifyContent: 'center' },
   buttonLabel: { color: '#ffffff', fontWeight: '600' },
+  headerActions: { flexDirection: 'row', gap: Spacing.two, flexWrap: 'wrap' },
+  compareButton: { backgroundColor: '#8A8A8E' },
   inviteButton: { alignSelf: 'flex-start', paddingHorizontal: Spacing.three, minHeight: Layout.minTouchTarget, borderRadius: Spacing.two, backgroundColor: '#7A1C2E', alignItems: 'center', justifyContent: 'center' },
   fieldLabel: { marginTop: Spacing.two, marginBottom: Spacing.one },
   linkLabel: { marginTop: Spacing.one },

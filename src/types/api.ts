@@ -1089,6 +1089,9 @@ export interface Application {
   permanentAddress: string | null;
   fresher: boolean | null;
   convertedUserId: string | null;
+  // Advisory AI résumé screening (POST /:id/ai-screen); null until first run.
+  aiScreeningResult: AiScreeningResult | null;
+  aiScreenedAt: string | null;
   // Uploaded documents — a null filename means that document doesn't exist.
   resumeFilename: string | null;
   resumeMimeType: string | null;
@@ -1101,6 +1104,50 @@ export interface Application {
   updatedAt: string;
   // Manager Interview schedules, most recent first; at most one is SCHEDULED.
   interviewSchedules?: InterviewSchedule[];
+}
+
+// backend/src/lib/cvScreen.ts CvScreeningResult. fitScore is 0-100. A result
+// with degraded=true (or the legacy all-empty shape, see isDegradedScreening)
+// carries a placeholder fitScore of 0 that must never be shown as a real score.
+export interface AiScreeningResult {
+  skillsMatched: string[];
+  experienceSummary: string;
+  fitScore: number;
+  rationale: string;
+  modelUsed: string;
+  degraded?: boolean;
+}
+
+// Subset of the AI interview / assignment scorecard that Compare displays
+// (backend lib/aiInterview.ts, ariaInterview.ts, aiAssignment.ts).
+// answeredCount === 0 (ARIA only) means "Not enough data", not a score of 0.
+export interface AiScorecardSummary {
+  weightedOverallScore: number;
+  answeredCount?: number;
+  totalCompetencies?: number;
+  flaggedForReview?: boolean;
+}
+
+// GET /applications/compare?role= — ApplicationComparisonRow
+// (backend/src/lib/applicationsData.ts). Stages not yet completed are null.
+export interface CompareCandidate {
+  id: string;
+  name: string;
+  status: ApplicationStatus;
+  aiScreeningResult: AiScreeningResult | null;
+  aiScreenedAt: string | null;
+  aiInterviewScorecard: AiScorecardSummary | null;
+  aiInterviewCompletedAt: string | null;
+  aiAssignmentScorecard: AiScorecardSummary | null;
+  aiAssignmentCompletedAt: string | null;
+  createdAt: string;
+}
+
+// GET /applications/role-coverage
+export interface RoleCoverage {
+  roleApplied: string;
+  applicantCount: number;
+  hasLiveTemplate: boolean;
 }
 
 // Manager Interview scheduling — see services/interviewSchedule.ts
