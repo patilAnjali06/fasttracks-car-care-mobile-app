@@ -2,8 +2,8 @@ import { BlurView } from 'expo-blur';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
-import { useEffect } from 'react';
-import { Dimensions, Pressable, ScrollView, StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Dimensions, Keyboard, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import Animated, {
   runOnJS,
   useAnimatedStyle,
@@ -101,10 +101,21 @@ export function SideMenu() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
   const progress = useSharedValue(0);
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     progress.value = withTiming(isOpen ? 1 : 0, { duration: 260 });
   }, [isOpen, progress]);
+
+  // Every way of closing the drawer (backdrop, swipe, navigating) flips isOpen,
+  // so resetting here means it always opens fresh with the full list.
+  useEffect(() => {
+    if (!isOpen) {
+      Keyboard.dismiss();
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reset on close
+      setQuery('');
+    }
+  }, [isOpen]);
 
   const panelStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: (progress.value - 1) * PANEL_WIDTH }],
@@ -128,6 +139,9 @@ export function SideMenu() {
     });
 
   const items = SCREEN_REGISTRY.filter((s) => !s.visibleToRoles || s.visibleToRoles.includes(user?.role ?? ''));
+  // Search narrows only what the role filter above already allows.
+  const q = query.trim().toLowerCase();
+  const visibleItems = q ? items.filter((s) => s.title.toLowerCase().includes(q)) : items;
 
   const navigateTo = (id: string, route?: string) => {
     close();
@@ -165,14 +179,39 @@ export function SideMenu() {
             style={StyleSheet.absoluteFill}
           />
           <SafeAreaView style={styles.panelContent}>
-            <ScrollView contentContainerStyle={styles.scroll}>
+            <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">
               <Image source={require('@/../assets/images/brand-logo-icon.png')} style={styles.logo} />
               <ThemedText type="subtitle">{user?.name}</ThemedText>
               <ThemedText type="small" themeColor="textSecondary" style={styles.role}>
                 {user?.role}
               </ThemedText>
 
-              {items.map((item) => (
+              <View style={[styles.search, { backgroundColor: colors.backgroundElement }]}>
+                <Ionicons name="search-outline" size={18} color={colors.textSecondary} />
+                <TextInput
+                  value={query}
+                  onChangeText={setQuery}
+                  placeholder="Search menu"
+                  placeholderTextColor={colors.textSecondary}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  returnKeyType="search"
+                  style={[styles.searchInput, { color: colors.text }]}
+                />
+                {query.length > 0 && (
+                  <Pressable onPress={() => setQuery('')} hitSlop={8} accessibilityLabel="Clear search">
+                    <Ionicons name="close-circle" size={18} color={colors.textSecondary} />
+                  </Pressable>
+                )}
+              </View>
+
+              {q && visibleItems.length === 0 && (
+                <ThemedText type="small" themeColor="textSecondary" style={styles.noMatch}>
+                  No matching screens
+                </ThemedText>
+              )}
+
+              {visibleItems.map((item) => (
                 <Pressable
                   key={item.id}
                   onPress={() => navigateTo(item.id, item.route)}
@@ -220,6 +259,17 @@ const styles = StyleSheet.create({
   scroll: { padding: Spacing.four, gap: Spacing.one },
   logo: { width: 48, height: 48, marginBottom: Spacing.two, borderRadius: 12 },
   role: { marginBottom: Spacing.three },
+  search: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    height: 44,
+    paddingHorizontal: Spacing.three,
+    borderRadius: Spacing.three,
+    marginBottom: Spacing.two,
+  },
+  searchInput: { flex: 1, fontSize: 15, paddingVertical: 0 },
+  noMatch: { paddingVertical: Spacing.two },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
