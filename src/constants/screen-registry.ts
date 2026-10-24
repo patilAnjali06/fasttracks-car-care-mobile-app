@@ -393,6 +393,16 @@ export const SCREEN_REGISTRY: ScreenMeta[] = [
     route: '/more/applications',
   },
   {
+    id: 'hr-reports',
+    title: 'HR Reports',
+    dashboardRoute: '/dashboard/hr-reports',
+    purpose: 'Export Hiring, Onboarding, Attendance or Discipline data for a date range as PDF or Excel.',
+    endpoints: ['GET /hr-reports/hiring', 'GET /hr-reports/onboarding', 'GET /hr-reports/attendance', 'GET /hr-reports/discipline'],
+    note: 'router.use(verifyToken, requireHROrOwner) = OWNER/STORE_MANAGER/HR/ACCOUNTING (backend/src/routes/hrReports.ts + middleware/auth.ts) — a static role check with no hr_module override (the dashboard page is roles-only too), so visibleToRoles mirrors it exactly. from/to are YYYY-MM-DD (not ISO timestamps), from <= to, format=pdf|excel. Files are downloaded with the Bearer token to the cache, then opened via the share sheet; a non-2xx response is read for its JSON error and never saved as a file.',
+    visibleToRoles: ['OWNER', 'STORE_MANAGER', 'HR', 'ACCOUNTING'],
+    route: '/more/hr-reports',
+  },
+  {
     id: 'analytics',
     title: 'Analytics',
     dashboardRoute: '/dashboard/analytics',

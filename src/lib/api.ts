@@ -211,6 +211,8 @@ import type {
   RetentionAnalytics,
   CompetencyTemplate,
   CompetencyTemplateListItem,
+  HrReportFormat,
+  HrReportKind,
   CompetencyCategory,
   CompetencyInput,
   CreateCompetencyTemplateInput,
@@ -2294,6 +2296,43 @@ export async function downloadApplicationFile(
     );
   }
   return { uri: result.uri, filename: serverFilename || filename };
+}
+
+// HR report exports — GET /hr-reports/:kind?from=&to=&format= streams a PDF or
+// Excel file behind the Bearer token (requireHROrOwner). `from`/`to` must be
+// YYYY-MM-DD (not ISO timestamps) with from <= to, or the server answers 400.
+// Same download-to-cache approach as downloadApplicationFile; on a non-2xx the
+// body is a JSON error, so read its message before discarding the file.
+export async function downloadHrReport(
+  kind: HrReportKind,
+  from: string,
+  to: string,
+  format: HrReportFormat,
+): Promise<{ uri: string; filename: string; mimeType: string }> {
+  const token = await tokenStorage.get();
+  const isExcel = format === 'excel';
+  const filename = `${kind}-report-${from}-to-${to}.${isExcel ? 'xlsx' : 'pdf'}`;
+  const dest = `${FileSystem.cacheDirectory}${filename}`;
+  const url = `${API_BASE_URL}/hr-reports/${kind}?from=${from}&to=${to}&format=${format}`;
+  const result = await FileSystem.downloadAsync(url, dest, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (result.status < 200 || result.status >= 300) {
+    let serverMessage: string | undefined;
+    try {
+      const body = JSON.parse(await FileSystem.readAsStringAsync(result.uri));
+      serverMessage = body?.error ?? body?.message;
+    } catch {
+      // Not JSON — fall back to the status code below.
+    }
+    await FileSystem.deleteAsync(result.uri, { idempotent: true }).catch(() => {});
+    throw new Error(serverMessage ?? `Could not generate the report (error ${result.status}).`);
+  }
+  return {
+    uri: result.uri,
+    filename,
+    mimeType: isExcel ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/pdf',
+  };
 }
 
 export async function setEmployeeSalary(userId: string, newSalary: number) {

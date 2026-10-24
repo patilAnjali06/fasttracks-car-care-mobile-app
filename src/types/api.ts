@@ -2888,3 +2888,7 @@ export interface RegenerateCompetencyTemplateInput {
   category: CompetencyCategory;
   description?: string;
 }
+
+// HR report exports (backend/src/routes/hrReports.ts).
+export type HrReportKind = 'hiring' | 'onboarding' | 'attendance' | 'discipline';
+export type HrReportFormat = 'pdf' | 'excel';
