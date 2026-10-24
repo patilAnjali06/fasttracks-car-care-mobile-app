@@ -13,6 +13,7 @@ import Animated, {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 
+import { hasMenuIcon, MenuIcon } from '@/components/menu-icon';
 import { ThemedText } from '@/components/themed-text';
 import { SCREEN_REGISTRY } from '@/constants/screen-registry';
 import { Colors, Spacing } from '@/constants/theme';
@@ -22,78 +23,18 @@ import { useDrawer } from '@/lib/drawer-context';
 
 const PANEL_WIDTH = Math.min(300, Dimensions.get('window').width * 0.82);
 
-const MENU_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  tasks: 'checkbox-outline',
-  customers: 'people-outline',
-  'my-timesheet': 'time-outline',
-  reminders: 'alarm-outline',
-  'my-salary': 'wallet-outline',
-  'my-payslips': 'document-outline',
-  expenses: 'receipt-outline',
-  payslips: 'document-text-outline',
-  overtime: 'hourglass-outline',
-  'leave-requests': 'calendar-outline',
-  onboarding: 'clipboard-outline',
-  analytics: 'analytics-outline',
-  'hr-reports': 'download-outline',
-  competencies: 'ribbon-outline',
-  applications: 'person-add-outline',
-  'my-finance': 'cash-outline',
-  'personal-info': 'person-outline',
-  'timesheets-manager': 'time-outline',
-  'overtime-approval': 'hourglass-outline',
-  'finance-approvals': 'cash-outline',
-  employees: 'people-outline',
-  'employee-documents': 'folder-outline',
-  contacts: 'call-outline',
-  incentives: 'trophy-outline',
-  'team-chat': 'chatbubbles-outline',
-  payroll: 'wallet-outline',
-  inventory: 'cube-outline',
-  invoices: 'document-text-outline',
-  quotations: 'reader-outline',
-  pipeline: 'git-network-outline',
-  calls: 'call-outline',
-  accounting: 'calculator-outline',
-  accounts: 'business-outline',
-  financial: 'bar-chart-outline',
-  legal: 'briefcase-outline',
-  devices: 'phone-portrait-outline',
-  settings: 'construct-outline',
-  'sim-tracker': 'card-outline',
-  agents: 'hardware-chip-outline',
-  overview: 'speedometer-outline',
-  remarks: 'chatbox-ellipses-outline',
-  'new-entry': 'add-circle-outline',
-  attendance: 'time-outline',
-  'erp-finance': 'cash-outline',
-};
 
-// Guards against a bug that's shipped 3 times now (Phase 2, 3, 4): a new
-// screen-registry entry with no matching MENU_ICONS key silently falls back
-// to a plain circle in the side menu instead of a real icon. This surfaces
-// it immediately in dev rather than waiting for someone to spot a circle on
-// a real device.
+// Dev-only guard: a registry entry with no icon in menu-icon.tsx would silently
+// render a plain circle in the side menu. Surface it immediately.
 if (__DEV__) {
-  const missing = SCREEN_REGISTRY.filter((s) => !MENU_ICONS[s.id]).map((s) => s.id);
+  const missing = SCREEN_REGISTRY.filter((s) => !hasMenuIcon(s.id)).map((s) => s.id);
   if (missing.length > 0) {
     console.warn(
-      `[side-menu] MENU_ICONS is missing an entry for: ${missing.join(', ')} — these will render as a plain circle. Add them to MENU_ICONS in src/components/side-menu.tsx.`
+      `[side-menu] menu-icon.tsx has no icon for: ${missing.join(', ')} — these render as a plain circle. Add them to MENU_ICON_PATHS in src/components/menu-icon.tsx.`
     );
   }
 }
 
-/** Layered icon that fakes a soft 3D/neumorphic look from a flat vector
- * glyph: a dark "shadow" glyph offset behind a lighter one, no real 3D asset
- * pipeline available in this environment (see NAV_REDESIGN_PLAN.md). */
-function DepthIcon({ name, color }: { name: keyof typeof Ionicons.glyphMap; color: string }) {
-  return (
-    <Animated.View style={styles.iconWrap}>
-      <Ionicons name={name} size={22} color="#00000030" style={styles.iconShadow} />
-      <Ionicons name={name} size={22} color={color} />
-    </Animated.View>
-  );
-}
 
 export function SideMenu() {
   const { isOpen, close } = useDrawer();
@@ -216,7 +157,7 @@ export function SideMenu() {
                   key={item.id}
                   onPress={() => navigateTo(item.id, item.route)}
                   style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
-                  <DepthIcon name={MENU_ICONS[item.id] ?? 'ellipse-outline'} color={colors.text} />
+                  <MenuIcon id={item.id} color={colors.text} size={22} />
                   <ThemedText style={styles.rowLabel} numberOfLines={2}>{item.title}</ThemedText>
                 </Pressable>
               ))}
@@ -227,7 +168,7 @@ export function SideMenu() {
                   signOut();
                 }}
                 style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
-                <DepthIcon name="log-out-outline" color={colors.danger} />
+                <MenuIcon id="sign-out" color={colors.danger} size={22} />
                 <ThemedText style={[styles.rowLabel, { color: colors.danger }]}>Sign out</ThemedText>
               </Pressable>
             </ScrollView>
@@ -278,6 +219,4 @@ const styles = StyleSheet.create({
   },
   rowPressed: { opacity: 0.5 },
   rowLabel: { fontSize: 16, flex: 1 },
-  iconWrap: { width: 22, height: 22 },
-  iconShadow: { position: 'absolute', top: 1.5, left: 1.5 },
 });
