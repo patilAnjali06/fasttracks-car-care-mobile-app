@@ -2858,3 +2858,33 @@ export interface CompetencyTemplateListItem extends CompetencyTemplate {
   // version reads APPROVED (the role is still hireable).
   liveStatus: CompetencyTemplateStatus;
 }
+
+// One competency as sent to POST / and PATCH /:id (validateCompetencies in
+// competencyTemplates.ts): name required, weightage an integer 0-100, and every
+// weightage in a template must add up to exactly 100.
+export interface CompetencyInput {
+  name: string;
+  weightage: number;
+  description?: string;
+  whatToAssess?: string;
+  ratingGuide?: string;
+}
+
+export interface CreateCompetencyTemplateInput {
+  roleName: string;
+  category: CompetencyCategory;
+  competencies: CompetencyInput[];
+}
+
+// POST /suggest and POST /:id/regenerate — AI calls; category is required by
+// both, description is optional context (never stored).
+export interface SuggestCompetencyTemplateInput {
+  roleName: string;
+  category: CompetencyCategory;
+  description?: string;
+}
+
+export interface RegenerateCompetencyTemplateInput {
+  category: CompetencyCategory;
+  description?: string;
+}

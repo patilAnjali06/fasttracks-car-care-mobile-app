@@ -211,6 +211,11 @@ import type {
   RetentionAnalytics,
   CompetencyTemplate,
   CompetencyTemplateListItem,
+  CompetencyCategory,
+  CompetencyInput,
+  CreateCompetencyTemplateInput,
+  SuggestCompetencyTemplateInput,
+  RegenerateCompetencyTemplateInput,
 } from '@/types/api';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -3174,4 +3179,41 @@ export async function unarchiveCompetencyTemplate(id: string) {
 export async function deleteCompetencyTemplate(id: string) {
   const { data } = await api.delete<ApiEnvelope<null>>(`/competency-templates/${id}`);
   return { message: data.message };
+}
+
+// Competency template authoring. POST / and POST /suggest answer 409 (with
+// `existingTemplateId` + `archived` on err.response.data) when the role already
+// has a template. Editing a DRAFT saves in place; editing an APPROVED template
+// saves as a NEW APPROVED version (live immediately) — the returned template
+// has a new id. Suggest/regenerate are LLM calls (120s ceiling, 502 if the AI
+// fails); regenerating an APPROVED template creates a new DRAFT version while
+// the approved one keeps serving.
+export async function fetchDesignations() {
+  const { data } = await api.get<ApiEnvelope<string[]>>('/competency-templates/designations');
+  return data.data;
+}
+
+export async function createCompetencyTemplate(body: CreateCompetencyTemplateInput) {
+  const { data } = await api.post<ApiEnvelope<CompetencyTemplate>>('/competency-templates', body);
+  return { template: data.data, message: data.message };
+}
+
+export async function updateCompetencyTemplate(id: string, body: { competencies: CompetencyInput[]; category?: CompetencyCategory }) {
+  const { data } = await api.patch<ApiEnvelope<CompetencyTemplate>>(`/competency-templates/${id}`, body);
+  return { template: data.data, message: data.message };
+}
+
+export async function suggestCompetencyTemplate(body: SuggestCompetencyTemplateInput) {
+  const { data } = await api.post<ApiEnvelope<CompetencyTemplate>>('/competency-templates/suggest', body, { timeout: 120000 });
+  return { template: data.data, message: data.message };
+}
+
+export async function regenerateCompetencyTemplate(id: string, body: RegenerateCompetencyTemplateInput) {
+  const { data } = await api.post<ApiEnvelope<CompetencyTemplate>>(`/competency-templates/${id}/regenerate`, body, { timeout: 120000 });
+  return { template: data.data, message: data.message };
+}
+
+export async function fetchCompetencyTemplateVersions(id: string) {
+  const { data } = await api.get<ApiEnvelope<CompetencyTemplate[]>>(`/competency-templates/${id}/versions`);
+  return data.data;
 }
