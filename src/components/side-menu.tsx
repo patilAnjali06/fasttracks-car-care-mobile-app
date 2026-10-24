@@ -217,7 +217,7 @@ export function SideMenu() {
                   onPress={() => navigateTo(item.id, item.route)}
                   style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}>
                   <DepthIcon name={MENU_ICONS[item.id] ?? 'ellipse-outline'} color={colors.text} />
-                  <ThemedText style={styles.rowLabel}>{item.title}</ThemedText>
+                  <ThemedText style={styles.rowLabel} numberOfLines={2}>{item.title}</ThemedText>
                 </Pressable>
               ))}
 
@@ -277,7 +277,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two + 4,
   },
   rowPressed: { opacity: 0.5 },
-  rowLabel: { fontSize: 16 },
+  rowLabel: { fontSize: 16, flex: 1 },
   iconWrap: { width: 22, height: 22 },
   iconShadow: { position: 'absolute', top: 1.5, left: 1.5 },
 });
