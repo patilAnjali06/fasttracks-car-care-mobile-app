@@ -211,6 +211,10 @@ import type {
   RetentionAnalytics,
   CompetencyTemplate,
   CompetencyTemplateListItem,
+  DocumentAccessEntry,
+  DocumentAccessParams,
+  ActionLogEntry,
+  ActionLogParams,
   OnboardingTemplate,
   OnboardingTaskInput,
   SuggestedOnboardingTask,
@@ -3396,4 +3400,17 @@ export async function suggestOnboardingTemplate(body: { roleName: string; depart
 export async function updateOnboardingTemplate(id: string, body: { tasks: OnboardingTaskInput[] }) {
   const { data } = await api.patch<ApiEnvelope<OnboardingTemplate>>(`/onboarding-task-templates/${id}`, body);
   return { template: data.data, message: data.message };
+}
+
+// ── Audit Trail — read-only, newest first, capped at 200 rows by the server.
+// Both are gated by requireHROrOwner (OWNER/STORE_MANAGER/HR/ACCOUNTING).
+// from/to are YYYY-MM-DD and are read as IST day boundaries.
+export async function fetchDocumentAccessLog(params: DocumentAccessParams = {}) {
+  const { data } = await api.get<ApiEnvelope<DocumentAccessEntry[]>>('/identity-documents/views', { params });
+  return data.data;
+}
+
+export async function fetchActionLog(params: ActionLogParams = {}) {
+  const { data } = await api.get<ApiEnvelope<ActionLogEntry[]>>('/action-log', { params });
+  return data.data;
 }

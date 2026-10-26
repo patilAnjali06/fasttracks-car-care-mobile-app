@@ -3105,3 +3105,48 @@ export interface SuggestedOnboardingTask {
   description: string;
   responsible: string;
 }
+
+// Audit Trail. Two read-only logs, both HR/Owner-gated (requireHROrOwner =
+// OWNER/STORE_MANAGER/HR/ACCOUNTING), newest first, capped at 200 rows.
+// GET /identity-documents/views — the Document Access Log (every file view /
+// value reveal on an identity document). `action` is VIEW_FILE | REVEAL_VALUE.
+export interface DocumentAccessEntry {
+  id: string;
+  action: string;
+  createdAt: string;
+  viewedBy: { id: string; name: string };
+  document: {
+    id: string;
+    type: string;
+    label: string | null;
+    user: { id: string; name: string; employeeId: string | null };
+  };
+}
+
+export interface DocumentAccessParams {
+  employeeId?: string;
+  from?: string; // YYYY-MM-DD, IST day start
+  to?: string; // YYYY-MM-DD, IST day end
+  action?: string;
+}
+
+// GET /action-log — HR decisions merged from every source model.
+export interface ActionLogEntry {
+  id: string;
+  actionType: string;
+  timestamp: string;
+  actorId: string;
+  actorName: string;
+  subjectId: string | null;
+  subjectName: string | null;
+  subjectEmployeeId: string | null;
+  detail: string;
+}
+
+export interface ActionLogParams {
+  employeeId?: string;
+  actorId?: string;
+  from?: string;
+  to?: string;
+  actionType?: string; // one of the backend's ACTION_TYPES
+}

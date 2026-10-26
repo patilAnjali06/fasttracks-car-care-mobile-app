@@ -397,6 +397,16 @@ export const SCREEN_REGISTRY: ScreenMeta[] = [
     route: '/more/applications',
   },
   {
+    id: 'audit-trail',
+    title: 'Audit Trail',
+    dashboardRoute: '/dashboard/audit-trail',
+    purpose: 'Read-only Document Access Log (every document view/reveal) and HR Action Log (hiring, discipline, letter decisions).',
+    endpoints: ['GET /identity-documents/views', 'GET /action-log'],
+    note: 'Both routes are requireHROrOwner = OWNER/STORE_MANAGER/HR/ACCOUNTING (backend/src/routes/identity-documents.ts, actionLog.ts), and the dashboard page is those four roles only with no hr_module override, so visibleToRoles mirrors it exactly. Newest first, capped at 200 rows server-side; from/to are YYYY-MM-DD IST day boundaries. Action Log rows have no revealed-value field — "Revealed Value" is an action filter on the Document Access Log, not a column.',
+    visibleToRoles: ['OWNER', 'STORE_MANAGER', 'HR', 'ACCOUNTING'],
+    route: '/more/audit-trail',
+  },
+  {
     id: 'onboarding-templates',
     title: 'Onboarding Templates',
     dashboardRoute: '/dashboard/onboarding-templates',

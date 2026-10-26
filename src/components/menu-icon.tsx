@@ -102,6 +102,11 @@ const MENU_ICON_PATHS: Record<string, string[]> = {
   'password-manager': ['M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'],
   // Meta Ads
   'meta-ads': ['M3 3v18h18M18.7 8l-5.1 5.2-2.8-2.8L7 14.3'],
+  // Audit Trail
+  'audit-trail': [
+    'M15 12a3 3 0 11-6 0 3 3 0 016 0z',
+    'M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z',
+  ],
   // Onboarding Templates
   'onboarding-templates': ['M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 7l2 2 4-4'],
 
