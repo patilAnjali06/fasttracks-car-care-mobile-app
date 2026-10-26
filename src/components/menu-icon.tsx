@@ -100,12 +100,19 @@ const MENU_ICON_PATHS: Record<string, string[]> = {
   'my-timesheet': ['M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'],
   // Password Manager
   'password-manager': ['M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'],
+  // Meta Ads
+  'meta-ads': ['M3 3v18h18M18.7 8l-5.1 5.2-2.8-2.8L7 14.3'],
 
   // Not in the dashboard's navItems:
   // Notifications — shares the Reminders bell.
   notifications: ['M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9'],
   // Sign out — Heroicons "logout".
   'sign-out': ['M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1'],
+};
+
+// Extra <circle cx cy r> elements, for the few dashboard icons that have one.
+const MENU_ICON_CIRCLES: Record<string, [number, number, number][]> = {
+  'meta-ads': [[18.7,8,1.6]],
 };
 
 /** True when the menu has a real icon for this id (used by the dev warning in side-menu). */
@@ -118,9 +125,14 @@ export function MenuIcon({ id, color, size = 22 }: { id: string; color: string; 
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
       {paths ? (
-        paths.map((d) => (
-          <Path key={d} d={d} stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
-        ))
+        <>
+          {paths.map((d) => (
+            <Path key={d} d={d} stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+          ))}
+          {(MENU_ICON_CIRCLES[id] ?? []).map(([cx, cy, r]) => (
+            <Circle key={cx + "-" + cy} cx={cx} cy={cy} r={r} stroke={color} strokeWidth={1.8} />
+          ))}
+        </>
       ) : (
         // Unknown id: a plain circle so nothing crashes.
         <Circle cx={12} cy={12} r={8} stroke={color} strokeWidth={1.8} />

@@ -776,6 +776,9 @@ export interface ResolvedPermissions {
   tabs: Record<string, boolean>;
   tabModes: Record<string, string>;
   hasLegalAccess: boolean;
+  // GET /auth/me's hasAdsAccess = middleware/auth.ts hasAdsAccess: OWNER, or an
+  // explicit `ads` grant — the exact check behind requireAdsAccess.
+  hasAdsAccess: boolean;
 }
 
 export interface ExpenseAttachment {
@@ -2958,4 +2961,110 @@ export interface CardEntryInput {
   cvv?: string;
   billingAddress?: string;
   notes?: string;
+}
+
+// Meta Ads (backend/src/routes/ads.ts + adLeads.ts). Every endpoint sits behind
+// requireAdsAccess (OWNER, or an explicit `ads` grant). Windows are `days`
+// counted in IST, capped at 90 by the server. Totals come from the server-side
+// aggregates; nothing here is summed from the (paged) lead rows.
+export interface AdsDayRow {
+  date: string; // YYYY-MM-DD, IST
+  leads: number;
+  paid: number;
+  organic: number;
+  premium: number;
+  waiting: number;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  costPerLead: number | null;
+}
+
+// GET /ads/running rows. `comparable` false = the ad's spend predates lead
+// capture, so its leads / costPerLead are null and must not be shown as 0.
+export interface AdsRunningRow {
+  adId: string | null;
+  adName: string | null;
+  campaignName: string | null;
+  adsetName: string | null;
+  spend: number;
+  impressions: number;
+  clicks: number;
+  firstDay: string | null;
+  lastDay: string | null;
+  comparable: boolean;
+  leads: number | null;
+  costPerLead: number | null;
+}
+
+export interface AdsRunningResponse {
+  leadsSince: string | null;
+  rows: AdsRunningRow[];
+}
+
+// A row of ad_leads as GET /ads/lead-list returns it (the fields the page uses).
+export interface AdLead {
+  id: string;
+  name: string | null;
+  vehicle: string | null;
+  service: string | null;
+  location: string | null;
+  tier: string; // premium | mid | low | unknown
+  stage: string;
+  isPaid: boolean;
+  adHeadline: string | null;
+  seenAt: string | null;
+  seenBy: string | null;
+  responseSec: number | null;
+  remark: string | null;
+  remarkAt: string | null;
+  arrivedAt: string;
+}
+
+export interface AdLeadListResponse {
+  rows: AdLead[];
+  total: number;
+  offset: number;
+  limit: number;
+  hasMore: boolean;
+}
+
+// Server-side filters for /ads/lead-list (only set when active).
+export interface AdLeadFilters {
+  tier?: string; // comma list, e.g. 'premium,mid'
+  paid?: '1' | '0';
+  owner?: string; // a team member, or 'none' for not accepted
+  vehicle?: string;
+  adId?: string;
+  date?: string; // YYYY-MM-DD (IST day) — overrides days
+  waiting?: '1';
+}
+
+export interface AdsOwnerRow {
+  name: string;
+  leads: number;
+  medianSec: number | null;
+}
+
+export interface AdsFollowThrough {
+  days: number;
+  total: number;
+  accepted: number;
+  notAccepted: number;
+  remarks: number;
+  acceptedNoRemark: number;
+  underTwoMin: number;
+  medianResponseSec: number | null;
+  owners: AdsOwnerRow[];
+  tiers: { tier: string; leads: number }[];
+  vehicles: { vehicle: string; leads: number }[];
+}
+
+// POST /ads/refresh — spend + leads + ownership in one call, 60s cooldown.
+export interface AdsRefreshResult {
+  spendRows: number;
+  spendOk: boolean;
+  newLeads: number;
+  ownersUpdated: number;
+  failed: string[];
 }

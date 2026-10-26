@@ -211,6 +211,12 @@ import type {
   RetentionAnalytics,
   CompetencyTemplate,
   CompetencyTemplateListItem,
+  AdsDayRow,
+  AdsRunningResponse,
+  AdLeadListResponse,
+  AdLeadFilters,
+  AdsFollowThrough,
+  AdsRefreshResult,
   PasswordEntry,
   PasswordEntryInput,
   CardEntry,
@@ -285,11 +291,13 @@ export async function fetchMyPermissions(): Promise<ResolvedPermissions> {
     permissions?: Record<string, boolean> | null;
     permissionModes?: Record<string, string> | null;
     hasLegalAccess?: boolean;
+    hasAdsAccess?: boolean;
   }>>('/auth/me');
   return {
     tabs: data.data.permissions ?? {},
     tabModes: data.data.permissionModes ?? {},
     hasLegalAccess: data.data.hasLegalAccess === true,
+    hasAdsAccess: data.data.hasAdsAccess === true,
   };
 }
 
@@ -3319,4 +3327,35 @@ export async function revealCardNumber(id: string) {
 export async function revealCardCvv(id: string) {
   const { data } = await api.get<ApiEnvelope<{ value: string }>>(`/cards/${id}/reveal-cvv`);
   return data.data.value;
+}
+
+// ── Meta Ads — every route is gated server-side by requireAdsAccess (OWNER, or
+// an explicit `ads` grant). Windows are `days` in IST (server cap 90). Refresh
+// pulls spend from Meta, new leads from the desk and ownership — it has a 60s
+// server-side cooldown (429) and can take a while.
+export async function fetchAdsDaily(days: number) {
+  const { data } = await api.get<ApiEnvelope<AdsDayRow[]>>('/ads/daily', { params: { days } });
+  return data.data;
+}
+
+export async function fetchAdsRunning(days: number) {
+  const { data } = await api.get<ApiEnvelope<AdsRunningResponse>>('/ads/running', { params: { days } });
+  return data.data;
+}
+
+export async function fetchAdLeadList(days: number, limit: number, offset: number, filters: AdLeadFilters = {}) {
+  const { data } = await api.get<ApiEnvelope<AdLeadListResponse>>('/ads/lead-list', {
+    params: { days, limit, offset, ...filters },
+  });
+  return data.data;
+}
+
+export async function fetchAdsFollowThrough(days: number) {
+  const { data } = await api.get<ApiEnvelope<AdsFollowThrough>>('/ads/follow-through', { params: { days } });
+  return data.data;
+}
+
+export async function refreshAds() {
+  const { data } = await api.post<ApiEnvelope<AdsRefreshResult>>('/ads/refresh', undefined, { timeout: 120000 });
+  return data.data;
 }

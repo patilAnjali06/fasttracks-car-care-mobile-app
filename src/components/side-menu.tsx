@@ -20,6 +20,7 @@ import { Colors, Spacing } from '@/constants/theme';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/lib/auth-context';
 import { useDrawer } from '@/lib/drawer-context';
+import { usePermissions } from '@/lib/permissions-context';
 
 const PANEL_WIDTH = Math.min(300, Dimensions.get('window').width * 0.82);
 
@@ -39,6 +40,7 @@ if (__DEV__) {
 export function SideMenu() {
   const { isOpen, close } = useDrawer();
   const { user, signOut } = useAuth();
+  const { hasAdsAccess } = usePermissions();
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
   const progress = useSharedValue(0);
@@ -79,7 +81,12 @@ export function SideMenu() {
       if (shouldClose) runOnJS(close)();
     });
 
-  const items = SCREEN_REGISTRY.filter((s) => !s.visibleToRoles || s.visibleToRoles.includes(user?.role ?? ''));
+  // Role-gated entries by role; per-user-grant entries (requiresAccess) by the
+  // backend's own access check, fail-closed until permissions have loaded.
+  const items = SCREEN_REGISTRY.filter((s) => {
+    if (s.requiresAccess === 'ads') return hasAdsAccess;
+    return !s.visibleToRoles || s.visibleToRoles.includes(user?.role ?? '');
+  });
   // Search narrows only what the role filter above already allows.
   const q = query.trim().toLowerCase();
   const visibleItems = q ? items.filter((s) => s.title.toLowerCase().includes(q)) : items;

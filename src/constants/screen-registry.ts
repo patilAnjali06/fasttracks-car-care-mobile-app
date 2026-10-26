@@ -15,6 +15,10 @@ export interface ScreenMeta {
   // registry-driven menu without going through ScreenStub. Purely a
   // navigation target — does not affect `visibleToRoles` gating.
   route?: string;
+  // When set, the menu entry shows only to users who pass that backend access
+  // check (resolved by PermissionsProvider from GET /auth/me) instead of by
+  // role. For screens whose gate is a per-user grant, not a role list.
+  requiresAccess?: 'ads';
 }
 
 // Screens reachable from a dedicated bottom tab (attendance, conversations)
@@ -391,6 +395,18 @@ export const SCREEN_REGISTRY: ScreenMeta[] = [
     note: 'router.use(verifyToken, requireHROrOwner) = OWNER/STORE_MANAGER/HR/ACCOUNTING (backend/src/routes/applications.ts + middleware/auth.ts) — static role check, visibleToRoles mirrors it. Core subset only: resume view, AI screening/interview/assessment, scheduling, invites and outcome emails are not mirrored. PATCH status to SELECTED creates a candidate record (confirmed in-app first); an already-converted application cannot change status (server 400, surfaced as-is). AI_SCREENING also makes the server email the applicant a verification invite when an email is on file.',
     visibleToRoles: ['OWNER', 'STORE_MANAGER', 'HR', 'ACCOUNTING'],
     route: '/more/applications',
+  },
+  {
+    id: 'meta-ads',
+    title: 'Meta Ads',
+    dashboardRoute: '/dashboard/ads',
+    purpose: 'Meta ad spend, lead flow, ad performance, lead list with filters, daily report and team follow-through.',
+    endpoints: [
+      'GET /ads/daily', 'GET /ads/running', 'GET /ads/lead-list', 'GET /ads/follow-through', 'POST /ads/refresh',
+    ],
+    note: 'requireAdsAccess (backend/src/middleware/auth.ts hasAdsAccess): OWNER, or an explicit `ads` grant in Configure — NOT a role list, so there is no visibleToRoles; the menu entry uses requiresAccess:\'ads\' and the screen both read hasAdsAccess from GET /auth/me (PermissionsProvider), fail-closed. Mirrors the dashboard page exactly: five tabs (Overview, Ads & campaigns, All leads, Daily report, Team activity), a Today / 7 / 30 / All-time range (days, default 90, server cap 90) — not a from/to picker — and Refresh (POST /ads/refresh, 60s server cooldown). The dashboard does not use GET /ads/summary, /by-campaign, /leads, /today or POST /ads/sync (owner-only), so neither does this screen. Totals are server aggregates; no ROAS/revenue is shown because none is reconciled.',
+    requiresAccess: 'ads',
+    route: '/more/meta-ads',
   },
   {
     id: 'password-manager',

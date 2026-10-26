@@ -27,6 +27,9 @@ interface PermissionsContextValue {
   /** The real, per-userId legal-access check (backend/src/middleware/auth.ts
    *  hasLegalAccess) — NOT the decorative 'legal' tabRegistry entry. */
   hasLegalAccess: boolean;
+  /** The real requireAdsAccess check (OWNER, or an explicit `ads` grant) —
+   *  backend/src/middleware/auth.ts hasAdsAccess, via GET /auth/me. */
+  hasAdsAccess: boolean;
   refresh: () => Promise<void>;
 }
 
@@ -71,6 +74,7 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       status,
       error,
       hasLegalAccess: status === 'ready' && resolved?.hasLegalAccess === true,
+      hasAdsAccess: status === 'ready' && resolved?.hasAdsAccess === true,
       hasTab: (tabKey: string) => status === 'ready' && resolved?.tabs?.[tabKey] === true,
       tabMode: (tabKey: string) => (status === 'ready' ? (resolved?.tabModes?.[tabKey] ?? null) : null),
       refresh: load,
