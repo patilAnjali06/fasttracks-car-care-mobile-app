@@ -211,6 +211,9 @@ import type {
   RetentionAnalytics,
   CompetencyTemplate,
   CompetencyTemplateListItem,
+  OnboardingTemplate,
+  OnboardingTaskInput,
+  SuggestedOnboardingTask,
   AdsDayRow,
   AdsRunningResponse,
   AdLeadListResponse,
@@ -3358,4 +3361,39 @@ export async function fetchAdsFollowThrough(days: number) {
 export async function refreshAds() {
   const { data } = await api.post<ApiEnvelope<AdsRefreshResult>>('/ads/refresh', undefined, { timeout: 120000 });
   return data.data;
+}
+
+// ── Onboarding task templates — /onboarding-task-templates is gated
+// server-side by requireHRModuleAccess (OWNER/STORE_MANAGER/HR/ACCOUNTING, or
+// the hr_module tab). Create answers 400 if the role already has a template.
+// PATCH replaces the template's tasks in place (roleName cannot change).
+// Suggest is an LLM call (120s ceiling, 502 if the AI fails) and persists
+// nothing — it only returns drafted tasks.
+export async function fetchOnboardingTemplates() {
+  const { data } = await api.get<ApiEnvelope<OnboardingTemplate[]>>('/onboarding-task-templates');
+  return data.data;
+}
+
+export async function fetchOnboardingTemplate(id: string) {
+  const { data } = await api.get<ApiEnvelope<OnboardingTemplate>>(`/onboarding-task-templates/${id}`);
+  return data.data;
+}
+
+export async function createOnboardingTemplate(body: { roleName: string; tasks: OnboardingTaskInput[] }) {
+  const { data } = await api.post<ApiEnvelope<OnboardingTemplate>>('/onboarding-task-templates', body);
+  return { template: data.data, message: data.message };
+}
+
+export async function suggestOnboardingTemplate(body: { roleName: string; department?: string }) {
+  const { data } = await api.post<ApiEnvelope<{ tasks: SuggestedOnboardingTask[] }>>(
+    '/onboarding-task-templates/suggest',
+    body,
+    { timeout: 120000 },
+  );
+  return data.data.tasks;
+}
+
+export async function updateOnboardingTemplate(id: string, body: { tasks: OnboardingTaskInput[] }) {
+  const { data } = await api.patch<ApiEnvelope<OnboardingTemplate>>(`/onboarding-task-templates/${id}`, body);
+  return { template: data.data, message: data.message };
 }

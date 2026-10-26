@@ -3068,3 +3068,40 @@ export interface AdsRefreshResult {
   ownersUpdated: number;
   failed: string[];
 }
+
+// Role-specific onboarding task templates (backend/src/routes/
+// onboardingTaskTemplates.ts, TEMPLATE_SELECT). One row per role; edits mutate
+// in place (no versions) and roleName is immutable after creation.
+export interface OnboardingTemplateTask {
+  id: string;
+  label: string;
+  description: string | null;
+  responsible: string | null;
+  sortOrder: number;
+}
+
+export interface OnboardingTemplate {
+  id: string;
+  roleName: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: { id: string; name: string };
+  updatedBy: { id: string; name: string } | null;
+  tasks: OnboardingTemplateTask[];
+}
+
+// A task as sent to POST / and PATCH /:id (validateTasks): label required,
+// description / responsible optional.
+export interface OnboardingTaskInput {
+  label: string;
+  description?: string;
+  responsible?: string;
+}
+
+// POST /suggest returns drafted tasks and writes NOTHING — only an explicit
+// Save (POST / or PATCH /:id) persists, which is the approval step.
+export interface SuggestedOnboardingTask {
+  label: string;
+  description: string;
+  responsible: string;
+}

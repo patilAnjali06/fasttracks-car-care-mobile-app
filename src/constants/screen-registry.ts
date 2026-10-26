@@ -397,6 +397,19 @@ export const SCREEN_REGISTRY: ScreenMeta[] = [
     route: '/more/applications',
   },
   {
+    id: 'onboarding-templates',
+    title: 'Onboarding Templates',
+    dashboardRoute: '/dashboard/onboarding-templates',
+    purpose: 'Role-specific onboarding checklists — create, edit, and AI-suggest tasks per role.',
+    endpoints: [
+      'GET /onboarding-task-templates', 'GET /onboarding-task-templates/:id', 'POST /onboarding-task-templates',
+      'POST /onboarding-task-templates/suggest', 'PATCH /onboarding-task-templates/:id',
+    ],
+    note: 'router.use(verifyToken, requireHRModuleAccess) (backend/src/routes/onboardingTaskTemplates.ts): OWNER/STORE_MANAGER/HR/ACCOUNTING pass on role, anyone else needs the hr_module tab — gated like analytics and competencies (static roles, else PermissionGate hr_module; the menu entry is limited to the four roles). POST /suggest persists nothing — it returns drafted tasks into the editor and only an explicit Save writes. roleName is immutable after creation (PATCH only replaces tasks); creating a role that already has a template is refused (400).',
+    visibleToRoles: ['OWNER', 'STORE_MANAGER', 'HR', 'ACCOUNTING'],
+    route: '/more/onboarding-templates',
+  },
+  {
     id: 'meta-ads',
     title: 'Meta Ads',
     dashboardRoute: '/dashboard/ads',
