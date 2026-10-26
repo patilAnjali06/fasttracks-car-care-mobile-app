@@ -211,6 +211,10 @@ import type {
   RetentionAnalytics,
   CompetencyTemplate,
   CompetencyTemplateListItem,
+  PasswordEntry,
+  PasswordEntryInput,
+  CardEntry,
+  CardEntryInput,
   HrReportFormat,
   HrReportKind,
   CompetencyCategory,
@@ -3255,4 +3259,64 @@ export async function regenerateCompetencyTemplate(id: string, body: RegenerateC
 export async function fetchCompetencyTemplateVersions(id: string) {
   const { data } = await api.get<ApiEnvelope<CompetencyTemplate[]>>(`/competency-templates/${id}/versions`);
   return data.data;
+}
+
+// ── Password Manager — /passwords and /cards are gated server-side by
+// requireRoles(OWNER, STORE_MANAGER, INVENTORY_MANAGER); rows are further
+// scoped to what the caller added (OWNER sees all, STORE_MANAGER everything not
+// added by an OWNER). Lists are masked; the reveal* endpoints return the one
+// real secret as { value } and must only be called on an explicit Reveal tap.
+export async function fetchPasswordEntries() {
+  const { data } = await api.get<ApiEnvelope<PasswordEntry[]>>('/passwords');
+  return data.data;
+}
+
+export async function createPasswordEntry(body: PasswordEntryInput) {
+  const { data } = await api.post<ApiEnvelope<PasswordEntry>>('/passwords', body);
+  return data.data;
+}
+
+export async function updatePasswordEntry(id: string, body: Partial<PasswordEntryInput>) {
+  const { data } = await api.put<ApiEnvelope<PasswordEntry>>(`/passwords/${id}`, body);
+  return data.data;
+}
+
+export async function deletePasswordEntry(id: string) {
+  const { data } = await api.delete<ApiEnvelope<null>>(`/passwords/${id}`);
+  return data.data;
+}
+
+export async function revealPasswordEntry(id: string) {
+  const { data } = await api.get<ApiEnvelope<{ value: string }>>(`/passwords/${id}/reveal`);
+  return data.data.value;
+}
+
+export async function fetchCardEntries() {
+  const { data } = await api.get<ApiEnvelope<CardEntry[]>>('/cards');
+  return data.data;
+}
+
+export async function createCardEntry(body: CardEntryInput) {
+  const { data } = await api.post<ApiEnvelope<CardEntry>>('/cards', body);
+  return data.data;
+}
+
+export async function updateCardEntry(id: string, body: Partial<CardEntryInput>) {
+  const { data } = await api.put<ApiEnvelope<CardEntry>>(`/cards/${id}`, body);
+  return data.data;
+}
+
+export async function deleteCardEntry(id: string) {
+  const { data } = await api.delete<ApiEnvelope<null>>(`/cards/${id}`);
+  return data.data;
+}
+
+export async function revealCardNumber(id: string) {
+  const { data } = await api.get<ApiEnvelope<{ value: string }>>(`/cards/${id}/reveal-number`);
+  return data.data.value;
+}
+
+export async function revealCardCvv(id: string) {
+  const { data } = await api.get<ApiEnvelope<{ value: string }>>(`/cards/${id}/reveal-cvv`);
+  return data.data.value;
 }

@@ -98,6 +98,8 @@ const MENU_ICON_PATHS: Record<string, string[]> = {
   competencies: ['M9 3v18m6-18v18M4 8h4m8 0h4M4 16h4m8 0h4M4 5h16v14H4V5z'],
   // My Timesheet
   'my-timesheet': ['M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z'],
+  // Password Manager
+  'password-manager': ['M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z'],
 
   // Not in the dashboard's navItems:
   // Notifications — shares the Reminders bell.

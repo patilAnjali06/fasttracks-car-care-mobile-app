@@ -393,6 +393,19 @@ export const SCREEN_REGISTRY: ScreenMeta[] = [
     route: '/more/applications',
   },
   {
+    id: 'password-manager',
+    title: 'Password Manager',
+    dashboardRoute: '/dashboard/password-manager',
+    purpose: 'Securely store passwords and payment cards — masked in lists, revealed on demand, copy, edit, delete.',
+    endpoints: [
+      'GET/POST /passwords', 'GET /passwords/:id/reveal', 'PUT/DELETE /passwords/:id',
+      'GET/POST /cards', 'GET /cards/:id/reveal-number', 'GET /cards/:id/reveal-cvv', 'PUT/DELETE /cards/:id',
+    ],
+    note: 'Both routers are requireRoles(OWNER, STORE_MANAGER, INVENTORY_MANAGER) (backend/src/routes/passwords.ts, cards.ts) — a static role check, so visibleToRoles mirrors it exactly. Rows are also scoped server-side: OWNER sees all, STORE_MANAGER everything not added by an OWNER, INVENTORY_MANAGER only their own; the same rule (canManage) decides who sees Edit/Delete/Reveal. Lists are masked; real passwords/card numbers/CVVs are fetched only on a Reveal tap, held in memory for 30s, and cleared on background/close — never logged or stored.',
+    visibleToRoles: ['OWNER', 'STORE_MANAGER', 'INVENTORY_MANAGER'],
+    route: '/more/password-manager',
+  },
+  {
     id: 'hr-reports',
     title: 'HR Reports',
     dashboardRoute: '/dashboard/hr-reports',

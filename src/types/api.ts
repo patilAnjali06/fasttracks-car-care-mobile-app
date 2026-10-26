@@ -2892,3 +2892,70 @@ export interface RegenerateCompetencyTemplateInput {
 // HR report exports (backend/src/routes/hrReports.ts).
 export type HrReportKind = 'hiring' | 'onboarding' | 'attendance' | 'discipline';
 export type HrReportFormat = 'pdf' | 'excel';
+
+// Password Manager (backend/src/routes/passwords.ts + cards.ts). Both routers
+// are requireRoles(OWNER, STORE_MANAGER, INVENTORY_MANAGER). The list endpoints
+// return secrets MASKED — `password` is always '••••••••', `cardNumber` is
+// '**** **** **** 1234' and `cvv` is '•••'; the real values come only from the
+// /reveal* endpoints.
+export interface SecretAddedBy {
+  id: string;
+  name: string;
+  role: string;
+}
+
+export interface PasswordEntry {
+  id: string;
+  title: string;
+  category: string;
+  url: string | null;
+  username: string;
+  password: string;
+  notes: string | null;
+  addedById: string;
+  addedBy: SecretAddedBy;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type CardType = 'CREDIT' | 'DEBIT';
+
+export interface CardEntry {
+  id: string;
+  label: string;
+  cardType: CardType;
+  bankName: string;
+  cardholderName: string;
+  cardNumber: string;
+  expiry: string;
+  cvv: string;
+  billingAddress: string | null;
+  notes: string | null;
+  addedById: string;
+  addedBy: SecretAddedBy;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// POST bodies. On update every field is optional; password / cardNumber / cvv
+// are only changed when a non-empty value is sent.
+export interface PasswordEntryInput {
+  title: string;
+  category: string;
+  url?: string;
+  username: string;
+  password?: string;
+  notes?: string;
+}
+
+export interface CardEntryInput {
+  label: string;
+  cardType: CardType;
+  bankName: string;
+  cardholderName: string;
+  cardNumber?: string;
+  expiry: string;
+  cvv?: string;
+  billingAddress?: string;
+  notes?: string;
+}
