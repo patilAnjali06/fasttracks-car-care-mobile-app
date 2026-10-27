@@ -46,3 +46,5 @@ example
 FastTracks_Mobile_Test_Cases.xlsx
 app.json.bak
 package.json.bak
+
+.env
