@@ -17,13 +17,15 @@ export type StatCardProps = {
   trend?: 'up' | 'down' | 'neutral';
   /** Text next to the value, e.g. "+12%". Coloured by `trend`. */
   trendValue?: string;
+  /** Colour of the big number (the dashboard tints it: success for collections, danger for outstanding…). */
+  valueColor?: string;
   loading?: boolean;
   style?: StyleProp<ViewStyle>;
 };
 
 // Dashboard KPICard: uppercase muted label, mono 24px semibold value, 10%
 // tinted icon tile, trend in success/danger/muted.
-export function StatCard({ label, value, subtitle, icon, color = 'primary', trend, trendValue, loading = false, style }: StatCardProps) {
+export function StatCard({ label, value, subtitle, icon, color = 'primary', trend, trendValue, valueColor, loading = false, style }: StatCardProps) {
   const theme = useTheme();
   if (loading) return <SkeletonCard style={style} />;
 
@@ -41,7 +43,7 @@ export function StatCard({ label, value, subtitle, icon, color = 'primary', tren
         ) : null}
       </View>
       <View style={styles.valueRow}>
-        <ThemedText style={styles.value} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{value}</ThemedText>
+        <ThemedText style={[styles.value, valueColor ? { color: valueColor } : null]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>{value}</ThemedText>
         {trend && trendValue ? (
           <View style={styles.trend}>
             {trend !== 'neutral' ? <Ionicons name={trend === 'up' ? 'arrow-up' : 'arrow-down'} size={14} color={trendColor} /> : null}
