@@ -1,23 +1,21 @@
-import { setAudioModeAsync, useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
-import { Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { Stack, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
-import { openExternalUrl } from '@/lib/open-url';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { CallRow } from '@/components/call-row';
+import { CustomerPhoneSearch } from '@/components/customer-phone-search';
+import { DialerPad } from '@/components/dialer-pad';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { MaxContentWidth, Spacing, Layout } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { fetchCallCapabilities, fetchCallLog, fetchCallRecordingDetail, fetchMyCallRecordingSummary, getErrorMessage } from '@/lib/api';
+import { fetchCallCapabilities, fetchCallLog, getErrorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
-import type { CallCapabilities, CallLogEntry, CallRecordingDetail, CallRecordingSummary } from '@/types/api';
+import { groupLabel } from '@/lib/call-format';
+import type { CallCapabilities, CallLogEntry } from '@/types/api';
 
-const STATUSES = ['QUEUED', 'IN_PROGRESS', 'COMPLETED', 'FAILED', 'BUSY', 'NO_ANSWER', 'CANCELED', 'UNKNOWN'];
-const DIRECTIONS: { value: 'INBOUND' | 'OUTBOUND'; label: string }[] = [
-  { value: 'INBOUND', label: 'Incoming' },
-  { value: 'OUTBOUND', label: 'Outgoing' },
-];
 type SortKey = 'date' | 'duration' | 'person';
 
 // GET /calls — requireRoles(CALL_ROLES=[OWNER,STORE_MANAGER,SALES])
@@ -27,147 +25,49 @@ type SortKey = 'date' | 'duration' | 'person';
 // SALES never gets a usable callRecordingId from this list (calls.ts's own
 // comment: SALES's "own" grant on calls:recording.listen only resolves for
 // a specific resource, never this global list).
-// Playback is in-app via expo-audio (RecordingPlayer below); "Open in
-// browser" (openExternalUrl) remains as the fallback if the player fails.
 const VIEW_ROLES = ['OWNER', 'STORE_MANAGER', 'SALES'];
 const RECORDING_ROLES = ['OWNER', 'STORE_MANAGER'];
 
-// expo-audio has no error event on the status, so a source that never reaches
-// isLoaded within this window is treated as a playback failure.
-const LOAD_TIMEOUT_MS = 15000;
-
-function formatDuration(seconds: number | null) {
-  if (seconds == null) return '—';
-  const total = Math.floor(seconds);
-  const m = Math.floor(total / 60);
-  const s = total % 60;
-  return `${m}:${s.toString().padStart(2, '0')}`;
-}
-
-// Mounted only while a row is expanded, so collapsing the row or expanding a
-// different one unmounts it — useAudioPlayer releases the player on unmount,
-// which stops playback. Keyed by audioUrl so a new source gets a fresh player.
-function RecordingPlayer({ audioUrl }: { audioUrl: string }) {
-  const theme = useTheme();
-  const player = useAudioPlayer(audioUrl);
-  const status = useAudioPlayerStatus(player);
-  const [timedOut, setTimedOut] = useState(false);
-  const [barWidth, setBarWidth] = useState(0);
-
-  useEffect(() => {
-    setAudioModeAsync({ playsInSilentMode: true }).catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    if (status.isLoaded) return;
-    const t = setTimeout(() => setTimedOut(true), LOAD_TIMEOUT_MS);
-    return () => clearTimeout(t);
-  }, [status.isLoaded]);
-
-  const failed = timedOut && !status.isLoaded;
-  const loading = !status.isLoaded && !failed;
-  const duration = status.duration > 0 ? status.duration : 0;
-  const progress = duration ? Math.min(status.currentTime / duration, 1) : 0;
-
-  const togglePlay = () => {
-    if (status.playing) {
-      player.pause();
-      return;
-    }
-    // Replay from the start once it has finished.
-    if (duration && status.currentTime >= duration - 0.25) player.seekTo(0);
-    player.play();
-  };
-
-  const onSeek = (x: number) => {
-    if (!duration || !barWidth) return;
-    player.seekTo(Math.max(0, Math.min(x / barWidth, 1)) * duration);
-  };
-
-  if (failed) {
-    return (
-      <View style={styles.playerWrap}>
-        <ThemedText type="small" style={styles.playerError}>Couldn&apos;t play this recording in the app.</ThemedText>
-        <Pressable onPress={() => openExternalUrl(audioUrl)} style={styles.playButton}>
-          <ThemedText style={styles.playButtonLabel}>Open in browser</ThemedText>
-        </Pressable>
-      </View>
-    );
-  }
-
-  return (
-    <View style={styles.playerWrap}>
-      <View style={styles.playerRow}>
-        <Pressable onPress={togglePlay} disabled={loading} style={[styles.playButton, loading && styles.playButtonDisabled]}>
-          {loading ? (
-            <ActivityIndicator size="small" color="#ffffff" />
-          ) : (
-            <ThemedText style={styles.playButtonLabel}>{status.playing ? 'Pause' : 'Play'}</ThemedText>
-          )}
-        </Pressable>
-        <ThemedText type="small" themeColor="textSecondary">
-          {loading ? 'Loading…' : status.isBuffering && status.playing ? 'Buffering…' : `${formatDuration(status.currentTime)} / ${formatDuration(duration)}`}
-        </ThemedText>
-      </View>
-      <Pressable
-        disabled={loading}
-        onLayout={(e) => setBarWidth(e.nativeEvent.layout.width)}
-        onPress={(e) => onSeek(e.nativeEvent.locationX)}
-        hitSlop={{ top: Spacing.two, bottom: Spacing.two }}
-        style={[styles.progressTrack, { backgroundColor: theme.background }]}>
-        <View style={[styles.progressFill, { width: `${progress * 100}%`, backgroundColor: theme.primary }]} />
-      </Pressable>
-    </View>
-  );
-}
+type CallsTab = 'dialer' | 'recents' | 'search';
+const TABS: { key: CallsTab; label: string; icon: 'keypad' | 'time' | 'search' }[] = [
+  { key: 'dialer', label: 'Dialer', icon: 'keypad' },
+  { key: 'recents', label: 'Recents', icon: 'time' },
+  { key: 'search', label: 'Search', icon: 'search' },
+];
 
 export default function CallsScreen() {
   const insets = useSafeAreaInsets();
   const theme = useTheme();
+  const router = useRouter();
+  const [tab, setTab] = useState<CallsTab>('dialer');
   const { user } = useAuth();
   const isAuthorized = VIEW_ROLES.includes(user?.role ?? '');
 
   const canPlayRecordings = RECORDING_ROLES.includes(user?.role ?? '');
   const [calls, setCalls] = useState<CallLogEntry[] | null>(null);
-  const [recordings, setRecordings] = useState<CallRecordingSummary[] | null>(null);
   const [capabilities, setCapabilities] = useState<CallCapabilities | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Filters — direction is a real server-side query param; everything else
-  // is client-side over the fetched rows, same as the dashboard's own
-  // FullCallsView (backend/src/routes/calls.ts only accepts customerId/
-  // direction).
+  // Client-side search + sort over the fetched rows.
   const [search, setSearch] = useState('');
-  const [direction, setDirection] = useState<'INBOUND' | 'OUTBOUND' | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
-  const [agent, setAgent] = useState<string | null>(null);
-  const [hasRecordingOnly, setHasRecordingOnly] = useState(false);
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
-
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [expandedData, setExpandedData] = useState<CallRecordingDetail | null>(null);
-  const [expandLoading, setExpandLoading] = useState(false);
 
   const load = useCallback(async () => {
     if (!isAuthorized) return;
     setError(null);
     try {
-      const [callLog, recSummary, caps] = await Promise.all([
-        fetchCallLog({ direction: direction ?? undefined }),
-        fetchMyCallRecordingSummary().catch(() => []),
+      const [callLog, caps] = await Promise.all([
+        fetchCallLog(),
         canPlayRecordings ? fetchCallCapabilities().catch(() => null) : Promise.resolve(null),
       ]);
       setCalls(callLog);
-      setRecordings(recSummary);
       setCapabilities(caps);
     } catch (err: any) {
       setError(getErrorMessage(err, 'Could not load calls.'));
     }
-  }, [isAuthorized, direction, canPlayRecordings]);
+  }, [isAuthorized, canPlayRecordings]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount
@@ -180,21 +80,10 @@ export default function CallsScreen() {
     setIsRefreshing(false);
   };
 
-  const agents = useMemo(() => {
-    const names = new Set<string>();
-    (calls ?? []).forEach((c) => { if (c.agentName) names.add(c.agentName); });
-    return Array.from(names).sort();
-  }, [calls]);
-
   const filteredCalls = useMemo(() => {
     if (!calls) return [];
     const q = search.trim().toLowerCase();
     const filtered = calls.filter((c) => {
-      if (status && c.status !== status) return false;
-      if (agent && c.agentName !== agent) return false;
-      if (hasRecordingOnly && !c.hasRecording) return false;
-      if (dateFrom && c.startedAt < dateFrom) return false;
-      if (dateTo && c.startedAt > `${dateTo}T23:59:59`) return false;
       if (q) {
         const haystack = [c.customerName, c.counterpartyDisplay, c.agentName].filter(Boolean).join(' ').toLowerCase();
         if (!haystack.includes(q)) return false;
@@ -209,22 +98,7 @@ export default function CallsScreen() {
       return sortDir === 'asc' ? cmp : -cmp;
     });
     return sorted;
-  }, [calls, search, status, agent, hasRecordingOnly, dateFrom, dateTo, sortKey, sortDir]);
-
-  const toggleExpandRecording = async (call: CallLogEntry) => {
-    if (expandedId === call.id) { setExpandedId(null); setExpandedData(null); return; }
-    setExpandedId(call.id);
-    setExpandedData(null);
-    if (!call.callRecordingId) return;
-    setExpandLoading(true);
-    try {
-      setExpandedData(await fetchCallRecordingDetail(call.callRecordingId));
-    } catch {
-      // silent — row still shows, just no detail
-    } finally {
-      setExpandLoading(false);
-    }
-  };
+  }, [calls, search, sortKey, sortDir]);
 
   if (!isAuthorized) {
     return (
@@ -237,31 +111,39 @@ export default function CallsScreen() {
   }
 
   return (
-    <>
-      <Stack.Screen options={{ title: 'Calls' }} />
-      {error && <ThemedText style={styles.error}>{error}</ThemedText>}
-      {calls === null ? (
+    <ThemedView style={styles.flex1}>
+      <Stack.Screen
+        options={{
+          title: 'Calls',
+          headerLeft: () => (
+            <Pressable
+              onPress={() => (router.canGoBack() ? router.back() : router.replace('/' as never))}
+              accessibilityLabel="Go back"
+              accessibilityRole="button"
+              hitSlop={Spacing.two}
+              style={styles.backButton}>
+              <Ionicons name="arrow-back" size={24} color={theme.text} />
+            </Pressable>
+          ),
+        }}
+      />
+      <View style={styles.flex1}>
+      {tab === 'dialer' && <DialerPad />}
+      {tab === 'search' && <CustomerPhoneSearch />}
+      {tab === 'recents' && error && <ThemedText style={styles.error}>{error}</ThemedText>}
+      {tab !== 'recents' ? null : calls === null ? (
         <ActivityIndicator style={styles.spinner} />
       ) : (
         <ScrollView
-          contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.three }]}
+          contentContainerStyle={[styles.content, { paddingBottom: Spacing.three }]}
           refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
         >
           {capabilities && !capabilities.callingEnabled && (
             <ThemedView type="backgroundElement" style={styles.banner}>
               <ThemedText type="small" style={styles.bannerText}>
-                Exotel calling isn&apos;t set up yet. Existing call history and recordings are still shown below.
+                Exotel calling isn&apos;t set up yet. Existing call history is still shown below.
               </ThemedText>
             </ThemedView>
-          )}
-          {recordings && recordings.length > 0 && (
-            <View style={styles.section}>
-              <ThemedText type="smallBold">My Recording Summary</ThemedText>
-              <ThemedText type="small" themeColor="textSecondary">
-                {recordings.length} recording{recordings.length === 1 ? '' : 's'} · transcripts available for{' '}
-                {recordings.filter((r) => r.transcriptAvailable).length}
-              </ThemedText>
-            </View>
           )}
           <TextInput
             value={search}
@@ -270,59 +152,6 @@ export default function CallsScreen() {
             placeholderTextColor={theme.textSecondary}
             style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement }]}
           />
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroller}>
-            <Pressable onPress={() => setDirection(null)} style={[styles.chip, { backgroundColor: direction === null ? theme.primary : theme.backgroundElement }]}>
-              <ThemedText type="small" style={direction === null ? styles.chipLabelActive : undefined}>All directions</ThemedText>
-            </Pressable>
-            {DIRECTIONS.map((d) => (
-              <Pressable key={d.value} onPress={() => setDirection(d.value)} style={[styles.chip, { backgroundColor: direction === d.value ? theme.primary : theme.backgroundElement }]}>
-                <ThemedText type="small" style={direction === d.value ? styles.chipLabelActive : undefined}>{d.label}</ThemedText>
-              </Pressable>
-            ))}
-          </ScrollView>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroller}>
-            <Pressable onPress={() => setStatus(null)} style={[styles.chip, { backgroundColor: status === null ? theme.primary : theme.backgroundElement }]}>
-              <ThemedText type="small" style={status === null ? styles.chipLabelActive : undefined}>All statuses</ThemedText>
-            </Pressable>
-            {STATUSES.map((s) => (
-              <Pressable key={s} onPress={() => setStatus(s)} style={[styles.chip, { backgroundColor: status === s ? theme.primary : theme.backgroundElement }]}>
-                <ThemedText type="small" style={status === s ? styles.chipLabelActive : undefined}>{s.replace(/_/g, ' ')}</ThemedText>
-              </Pressable>
-            ))}
-          </ScrollView>
-          {agents.length > 0 && (
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chipScroller}>
-              <Pressable onPress={() => setAgent(null)} style={[styles.chip, { backgroundColor: agent === null ? theme.primary : theme.backgroundElement }]}>
-                <ThemedText type="small" style={agent === null ? styles.chipLabelActive : undefined}>All agents</ThemedText>
-              </Pressable>
-              {agents.map((a) => (
-                <Pressable key={a} onPress={() => setAgent(a)} style={[styles.chip, { backgroundColor: agent === a ? theme.primary : theme.backgroundElement }]}>
-                  <ThemedText type="small" style={agent === a ? styles.chipLabelActive : undefined}>{a}</ThemedText>
-                </Pressable>
-              ))}
-            </ScrollView>
-          )}
-          <Pressable onPress={() => setHasRecordingOnly((v) => !v)} style={[styles.chip, styles.selfChip, { backgroundColor: hasRecordingOnly ? theme.primary : theme.backgroundElement }]}>
-            <ThemedText type="small" style={hasRecordingOnly ? styles.chipLabelActive : undefined}>Has recording only</ThemedText>
-          </Pressable>
-
-          <View style={styles.dateRow}>
-            <TextInput
-              value={dateFrom}
-              onChangeText={setDateFrom}
-              placeholder="From YYYY-MM-DD"
-              placeholderTextColor={theme.textSecondary}
-              style={[styles.input, styles.flex1, { color: theme.text, backgroundColor: theme.backgroundElement }]}
-            />
-            <TextInput
-              value={dateTo}
-              onChangeText={setDateTo}
-              placeholder="To YYYY-MM-DD"
-              placeholderTextColor={theme.textSecondary}
-              style={[styles.input, styles.flex1, { color: theme.text, backgroundColor: theme.backgroundElement }]}
-            />
-          </View>
-
           <View style={styles.sortRow}>
             <ThemedText type="small" themeColor="textSecondary">Sort by</ThemedText>
             {(['date', 'duration', 'person'] as SortKey[]).map((k) => (
@@ -342,49 +171,48 @@ export default function CallsScreen() {
             {filteredCalls.length === 0 ? (
               <ThemedText type="small" themeColor="textSecondary">No calls match these filters.</ThemedText>
             ) : (
-              filteredCalls.map((call) => (
-                <ThemedView key={call.id} type="backgroundElement" style={styles.row}>
-                  <ThemedText type="smallBold">
-                    {call.direction === 'INBOUND' ? 'Incoming' : 'Outgoing'} · {call.customerName ?? call.counterpartyDisplay ?? 'Unknown'}
-                  </ThemedText>
-                  <ThemedText type="small" themeColor="textSecondary">
-                    {new Date(call.startedAt).toLocaleString('en-IN')} · {formatDuration(call.durationSeconds)} · {call.status}
-                  </ThemedText>
-                  {call.agentName && <ThemedText type="small" themeColor="textSecondary">Agent: {call.agentName}</ThemedText>}
-                  {call.callRecordingId ? (
-                    <Pressable onPress={() => toggleExpandRecording(call)}>
-                      <ThemedText type="link">{expandedId === call.id ? 'Hide' : '▶ Play'}</ThemedText>
-                    </Pressable>
-                  ) : call.recordingProcessing ? (
-                    <ThemedText type="small" style={styles.processing}>Processing…</ThemedText>
-                  ) : call.hasRecording ? (
-                    <ThemedText type="small" themeColor="textSecondary">Recording available</ThemedText>
-                  ) : null}
-                  {expandedId === call.id && (
-                    expandLoading ? (
-                      <ActivityIndicator size="small" />
-                    ) : expandedData ? (
-                      <View style={styles.recordingDetail}>
-                        <RecordingPlayer key={expandedData.audioUrl} audioUrl={expandedData.audioUrl} />
-                        {expandedData.transcriptText ? (
-                          <ThemedText type="small" themeColor="textSecondary">{expandedData.transcriptText}</ThemedText>
-                        ) : (
-                          <ThemedText type="small" themeColor="textSecondary" style={styles.italic}>
-                            {expandedData.transcriptStatus === 'PROCESSING' ? 'Transcript in progress…' : 'Transcript not yet available'}
-                          </ThemedText>
-                        )}
-                      </View>
-                    ) : (
-                      <ThemedText type="small" themeColor="textSecondary" style={styles.italic}>Couldn&apos;t load this recording.</ThemedText>
-                    )
-                  )}
-                </ThemedView>
-              ))
+              <View>
+                {filteredCalls.map((call, i) => {
+                  // Headings only make sense when sorted by date.
+                  const label = sortKey === 'date' ? groupLabel(call.startedAt) : null;
+                  const showHeading = label !== null && (i === 0 || groupLabel(filteredCalls[i - 1].startedAt) !== label);
+                  return (
+                    <View key={call.id}>
+                      {showHeading && (
+                        <ThemedText type="smallBold" themeColor="textSecondary" style={styles.groupHeading}>{label}</ThemedText>
+                      )}
+                      <CallRow call={call} />
+                    </View>
+                  );
+                })}
+              </View>
             )}
           </View>
         </ScrollView>
       )}
-    </>
+      </View>
+      <View
+        style={[
+          styles.tabBar,
+          { backgroundColor: theme.backgroundElement, borderTopColor: theme.border, paddingBottom: insets.bottom },
+        ]}>
+        {TABS.map((t) => {
+          const active = tab === t.key;
+          return (
+            <Pressable
+              key={t.key}
+              onPress={() => setTab(t.key)}
+              accessibilityRole="tab"
+              accessibilityLabel={t.label}
+              accessibilityState={{ selected: active }}
+              style={styles.tabItem}>
+              <Ionicons name={t.icon} size={24} color={active ? theme.primary : theme.textSecondary} />
+              <ThemedText type="small" style={{ color: active ? theme.primary : theme.textSecondary }}>{t.label}</ThemedText>
+            </Pressable>
+          );
+        })}
+      </View>
+    </ThemedView>
   );
 }
 
@@ -394,26 +222,15 @@ const styles = StyleSheet.create({
   section: { gap: Spacing.two },
   error: { color: '#B83030', marginHorizontal: Spacing.three, marginTop: Spacing.two },
   spinner: { marginTop: Spacing.three },
-  row: { borderRadius: Spacing.three, padding: Spacing.three, minHeight: Layout.minTouchTarget, gap: Spacing.half },
   input: { height: 46, borderRadius: Spacing.two, paddingHorizontal: Spacing.three, fontSize: 15 },
-  chipScroller: { flexDirection: 'row' },
   chip: { paddingHorizontal: Spacing.two, paddingVertical: Spacing.one, borderRadius: 999, marginRight: Spacing.one },
-  selfChip: { alignSelf: 'flex-start' },
   chipLabelActive: { color: '#ffffff', fontWeight: '600' },
   banner: { borderRadius: Spacing.two, padding: Spacing.two, borderWidth: 1, borderColor: 'rgba(232,168,40,0.3)', backgroundColor: 'rgba(232,168,40,0.12)' },
   bannerText: { color: '#A86018' },
-  dateRow: { flexDirection: 'row', gap: Spacing.two },
   flex1: { flex: 1 },
   sortRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.one, flexWrap: 'wrap' },
-  processing: { color: '#A86018' },
-  recordingDetail: { gap: Spacing.one, marginTop: Spacing.one, paddingTop: Spacing.one, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: 'rgba(127,127,127,0.2)' },
-  playButton: { alignSelf: 'flex-start', paddingHorizontal: Spacing.two, paddingVertical: Spacing.one, borderRadius: Spacing.two, backgroundColor: '#7A1C2E' },
-  playButtonLabel: { color: '#ffffff', fontWeight: '600' },
-  playButtonDisabled: { opacity: 0.6, minWidth: 64, alignItems: 'center' },
-  playerWrap: { gap: Spacing.two },
-  playerRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
-  playerError: { color: '#B83030' },
-  progressTrack: { height: 8, borderRadius: 4, overflow: 'hidden' },
-  progressFill: { height: '100%', borderRadius: 4 },
-  italic: { fontStyle: 'italic' },
+  groupHeading: { marginTop: Spacing.two, marginBottom: Spacing.one },
+  backButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  tabBar: { flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth },
+  tabItem: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: Spacing.half, paddingVertical: Spacing.two, minHeight: Layout.minTouchTarget },
 });

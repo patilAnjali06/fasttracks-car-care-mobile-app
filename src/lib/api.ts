@@ -574,7 +574,7 @@ export function getErrorMessage(err: any, fallback: string) {
   return err?.response?.data?.message ?? err?.response?.data?.error ?? fallback;
 }
 
-export async function fetchCustomers(search?: string, filters?: { fromDate?: string; toDate?: string; source?: string }) {
+export async function fetchCustomers(search?: string, filters?: { fromDate?: string; toDate?: string; source?: string; searchBy?: 'phone' }) {
   const { data } = await api.get<CustomerListResponse>('/crm/customers', {
     params: { search: search || undefined, ...filters },
   });
