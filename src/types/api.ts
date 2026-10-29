@@ -3150,3 +3150,41 @@ export interface ActionLogParams {
   to?: string;
   actionType?: string; // one of the backend's ACTION_TYPES
 }
+
+// GET /reports/daily?date=YYYY-MM-DD (backend/src/routes/reports.ts) — the
+// dashboard Overview's "Daily Breakdown". jobs.list is passed through
+// untouched by the dashboard too, so it stays loosely typed.
+export interface DailyReportInvoice {
+  id: string;
+  invoiceNumber: string;
+  customerName: string;
+  vehicleNumber?: string | null;
+  grandTotal: number;
+  paidAmount: number;
+  balanceDue: number;
+  status: string;
+  createdBy?: string;
+  createdAt: string;
+}
+
+export interface DailyReport {
+  date: string;
+  revenue: { collected: number; invoiced: number; invoiceCount: number };
+  jobs: { total: number; byStatus: Record<string, number>; list: unknown[] };
+  customers: { new: number; returning: number; total: number };
+  employees: { name: string; employeeId: string | null; jobs: number; invoicedTotal: number; collectedTotal: number }[];
+  invoices: { count: number; list: DailyReportInvoice[] };
+  attendance: { present: number; late: number; absent: number; total: number };
+}
+
+// GET /reports/customer-stats?fromDate=&toDate= — "Customer & Walkout Stats".
+export interface CustomerStatsReport {
+  fromDate: string;
+  toDate: string;
+  jobs: { total: number };
+  customers: { total: number; new: number; returning: number };
+  walkouts: {
+    total: number;
+    byEmployee: { name: string; employeeId: string | null; walkouts: number; totalJobs: number; walkoutRate: number }[];
+  };
+}

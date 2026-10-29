@@ -235,6 +235,8 @@ import type {
   CreateCompetencyTemplateInput,
   SuggestCompetencyTemplateInput,
   RegenerateCompetencyTemplateInput,
+  CustomerStatsReport,
+  DailyReport,
 } from '@/types/api';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -3412,5 +3414,17 @@ export async function fetchDocumentAccessLog(params: DocumentAccessParams = {}) 
 
 export async function fetchActionLog(params: ActionLogParams = {}) {
   const { data } = await api.get<ApiEnvelope<ActionLogEntry[]>>('/action-log', { params });
+  return data.data;
+}
+
+// ── Dashboard Overview extras (OWNER Overview screen) — verifyToken +
+// report access (backend/src/routes/reports.ts).
+export async function fetchDailyReport(date: string) {
+  const { data } = await api.get<ApiEnvelope<DailyReport>>('/reports/daily', { params: { date } });
+  return data.data;
+}
+
+export async function fetchCustomerStats(fromDate: string, toDate: string) {
+  const { data } = await api.get<ApiEnvelope<CustomerStatsReport>>('/reports/customer-stats', { params: { fromDate, toDate } });
   return data.data;
 }

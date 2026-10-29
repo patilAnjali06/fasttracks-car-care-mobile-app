@@ -13,6 +13,7 @@ export const Colors = {
     textMuted: '#9A9AAA',
     background: '#F6F5F5',
     backgroundElement: '#FFFFFF', // dashboard --color-card
+    surface: '#FFFFFF', // dashboard --color-surface (inputs, secondary buttons)
     backgroundSelected: '#E8E0E1', // dashboard --color-border, used for dividers/selected rows
     border: '#E8E0E1',
     primary: '#7A1C2E',
@@ -27,6 +28,7 @@ export const Colors = {
     textMuted: '#4A3E40',
     background: '#0F0D0D',
     backgroundElement: '#1F1618', // dashboard --color-card (dark)
+    surface: '#181214', // dashboard --color-surface (dark)
     backgroundSelected: '#2E2325',
     border: '#2E2325',
     primary: '#8C3B4A',
@@ -98,3 +100,18 @@ export const Radii = {
 
 export const BottomTabInset = Platform.select({ ios: 50, android: 80 }) ?? 0;
 export const MaxContentWidth = 800;
+
+// Extra badge accents the dashboard takes from Tailwind (blue/purple/orange-400,
+// used with a 15% tint + 30% border). Same in light and dark, like the dashboard.
+export const Accents = {
+  blue: '#60A5FA',
+  purple: '#C084FC',
+  orange: '#FB923C',
+} as const;
+
+// "#RRGGBB" + alpha (0–1) -> "rgba(...)", for the dashboard's `bg-primary/15`
+// style tints and focus rings.
+export function withAlpha(hex: string, alpha: number) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
