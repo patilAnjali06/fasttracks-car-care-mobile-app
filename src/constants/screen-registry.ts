@@ -351,6 +351,16 @@ export const SCREEN_REGISTRY: ScreenMeta[] = [
     visibleToRoles: ['OWNER', 'STORE_MANAGER', 'SALES'],
   },
   {
+    id: 'call-tracker',
+    title: 'Call Tracker',
+    dashboardRoute: '',
+    purpose: 'Owner-only call report: masked numbers, recording, transcript and summary status per call.',
+    endpoints: [],
+    note: 'App-only screen with no dashboard page. Runs on sample data (src/lib/call-tracker.ts) until a backend API exists. OWNER only, since call recordings are for the founder.',
+    visibleToRoles: ['OWNER'],
+    route: '/more/call-tracker',
+  },
+  {
     id: 'inventory',
     title: 'Inventory',
     dashboardRoute: '/dashboard/inventory',
