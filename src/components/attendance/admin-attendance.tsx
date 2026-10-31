@@ -4,10 +4,15 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View,
+  ActivityIndicator, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View,
 } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 import * as XLSX from 'xlsx';
 
+import { AbsentToday, AdminHeader, TodayAttendance } from '@/components/attendance/admin-today';
+import { fmtIST as fmtTime, todayStr as todayISO } from '@/components/attendance/attendance-format';
+import { DayModal } from '@/components/attendance/day-modal';
+import { ErrorBanner } from '@/components/overview/parts';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Layout, MaxContentWidth, Radii, Spacing } from '@/constants/theme';
@@ -17,7 +22,7 @@ import {
   bulkMarkAttendance, downloadAttendanceReport, fetchAttendanceDailyLog, fetchAttendancePunches,
   fetchAttendanceRegister, fetchEmployees, fetchMyMonthlyAttendance, getErrorMessage,
   importDeviceAttendance, overrideAttendance,
-  type AttendanceDailyLogPerson, type AttendanceRegisterEmployee, type DeviceImportResult,
+  type AttendanceRegisterEmployee, type DeviceImportResult,
 } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import type { AttendanceRecord, EmployeeListItem } from '@/types/api';
@@ -35,24 +40,6 @@ const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'Ju
 const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const BULK_STATUSES = ['PRESENT', 'LATE', 'HALF_DAY', 'ABSENT'] as const;
 const OVERRIDE_STATUSES = ['PRESENT', 'LATE', 'HALF_DAY', 'ABSENT', 'LEAVE'] as const;
-
-function todayISO() {
-  return new Date().toLocaleDateString('en-CA');
-}
-function fmtTime(iso: string | null | undefined) {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return '—';
-  return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Kolkata' });
-}
-function totalHours(clockIn: string | null | undefined, clockOut: string | null | undefined): string {
-  if (!clockIn) return '—';
-  const inMs = new Date(clockIn).getTime();
-  const outMs = clockOut ? new Date(clockOut).getTime() : Date.now();
-  const mins = Math.floor((outMs - inMs) / 60000);
-  if (mins < 0) return '—';
-  return `${Math.floor(mins / 60)}h ${mins % 60}m`;
-}
 
 // ── Status chip row (shared by Bulk Mark + Override) ──────────────────────
 function StatusChips({
@@ -159,125 +146,6 @@ function OverrideModal({
   );
 }
 
-// ── Day View — select a date, see that day's employee list, tap to
-// override. The mobile-friendly replacement for the dashboard's wide
-// per-day/per-employee register grid (agreed layout exception). ──────────
-function DayView({
-  date, canOverride, myId, myRole, onClose, onOverrideSaved,
-}: {
-  date: string; canOverride: boolean; myId: string; myRole: string; onClose: () => void; onOverrideSaved: () => void;
-}) {
-  const theme = useTheme();
-  const [data, setData] = useState<Awaited<ReturnType<typeof fetchAttendanceDailyLog>> | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [search, setSearch] = useState('');
-  const [overrideTarget, setOverrideTarget] = useState<AttendanceDailyLogPerson | null>(null);
-
-  const load = useCallback(() => {
-    setError(null);
-    fetchAttendanceDailyLog(date).then(setData).catch((err) => setError(getErrorMessage(err, 'Failed to load attendance data.')));
-  }, [date]);
-
-  useEffect(() => { load(); }, [load]);
-
-  const q = search.trim().toLowerCase();
-  const absentees = (data?.absentees ?? []).filter((p) => !q || p.name.toLowerCase().includes(q));
-  const presentees = [...(data?.presentees ?? [])]
-    .sort((a, b) => (a.clockIn ?? '').localeCompare(b.clockIn ?? ''))
-    .filter((p) => !q || p.name.toLowerCase().includes(q));
-
-  const label = new Date(date + 'T00:00:00Z').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
-
-  return (
-    <Modal visible animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet">
-      <ThemedView type="background" style={styles.flex1}>
-        <View style={[styles.sheetHeader, { borderColor: theme.border }]}>
-          <View style={styles.flex1}>
-            <ThemedText type="subtitle">{label}</ThemedText>
-            {data && (
-              <ThemedText type="small" themeColor="textSecondary">
-                {data.counts.present} present{data.counts.late > 0 ? ` (${data.counts.late} late)` : ''} · {data.counts.absent} absent
-              </ThemedText>
-            )}
-          </View>
-          <Pressable onPress={onClose} hitSlop={8}><ThemedText type="subtitle">✕</ThemedText></Pressable>
-        </View>
-
-        <View style={styles.searchWrap}>
-          <TextInput
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Search employees…"
-            placeholderTextColor={theme.textSecondary}
-            style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement, borderColor: theme.border }]}
-          />
-        </View>
-
-        {error ? (
-          <ThemedText type="small" style={{ color: theme.danger, padding: Spacing.three }}>{error}</ThemedText>
-        ) : !data ? (
-          <ActivityIndicator style={{ marginTop: Spacing.four }} />
-        ) : (
-          <ScrollView contentContainerStyle={styles.sheetScroll}>
-            {absentees.length > 0 && (
-              <View style={{ marginBottom: Spacing.three }}>
-                <ThemedText type="smallBold" style={{ color: theme.danger, marginBottom: Spacing.two }}>Absent ({absentees.length})</ThemedText>
-                <View style={styles.chipRow}>
-                  {absentees.map((p) => (
-                    <Pressable
-                      key={p.id}
-                      disabled={!canOverride}
-                      onPress={() => setOverrideTarget(p)}
-                      style={[styles.chip, { borderColor: theme.danger, backgroundColor: `${theme.danger}18` }]}>
-                      <ThemedText type="small" style={{ color: theme.danger }}>{p.name}</ThemedText>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            <ThemedText type="smallBold" style={{ marginBottom: Spacing.two }}>Punch Log</ThemedText>
-            {presentees.length === 0 ? (
-              <ThemedText type="small" themeColor="textSecondary">{q ? 'No matches' : 'No records'}</ThemedText>
-            ) : (
-              presentees.map((p) => (
-                <Pressable
-                  key={p.id}
-                  onPress={() => canOverride && setOverrideTarget(p)}
-                  style={[styles.row, { borderColor: theme.border }]}>
-                  <View style={[styles.avatarBadge, { backgroundColor: attendanceStatusColor(p.status as any) }]}>
-                    <ThemedText type="small" style={styles.chipLabelActive}>{p.status.slice(0, 2)}</ThemedText>
-                  </View>
-                  <View style={styles.flex1}>
-                    <ThemedText type="smallBold">{p.name}</ThemedText>
-                    <ThemedText type="small" themeColor="textSecondary">{p.role.replace(/_/g, ' ')}</ThemedText>
-                  </View>
-                  <View style={styles.rowRight}>
-                    <ThemedText type="small" themeColor="textSecondary">In: {fmtTime(p.clockIn)}</ThemedText>
-                    <ThemedText type="small" themeColor="textSecondary">Out: {fmtTime(p.clockOut)}</ThemedText>
-                  </View>
-                </Pressable>
-              ))
-            )}
-          </ScrollView>
-        )}
-
-        {overrideTarget && (
-          <OverrideModal
-            empId={overrideTarget.id}
-            empName={overrideTarget.name}
-            date={date}
-            currentStatus={overrideTarget.status}
-            selfBlocked={myRole === 'STORE_MANAGER' && overrideTarget.id === myId}
-            onClose={() => setOverrideTarget(null)}
-            onSaved={() => { setOverrideTarget(null); load(); onOverrideSaved(); }}
-          />
-        )}
-      </ThemedView>
-    </Modal>
-  );
-}
-
 // ── Employee → their month as a list (agreed layout exception, the other
 // half of the register-grid replacement). ────────────────────────────────
 function EmployeeMonthView({
@@ -297,6 +165,7 @@ function EmployeeMonthView({
     fetchMyMonthlyAttendance(monthYear.month + 1, monthYear.year, employee.id).then(setRecords).catch(() => setRecords([]));
   }, [monthYear, employee.id]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount / month change
   useEffect(() => { load(); }, [load]);
 
   const prevMonth = () => setMonthYear((p) => (p.month === 0 ? { month: 11, year: p.year - 1 } : { ...p, month: p.month - 1 }));
@@ -545,6 +414,9 @@ export function AdminAttendance() {
   const [expandedLoading, setExpandedLoading] = useState(false);
 
   const [modalDate, setModalDate] = useState<string | null>(null);
+  const [modalStatus, setModalStatus] = useState<string | null>(null);
+  const [width, setWidth] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
   const [monthViewEmployee, setMonthViewEmployee] = useState<AttendanceRegisterEmployee | null>(null);
   const [bulkMarkOpen, setBulkMarkOpen] = useState(false);
   const [importResults, setImportResults] = useState<DeviceImportResult | null>(null);
@@ -572,7 +444,27 @@ export function AdminAttendance() {
     }
   }, [today, fromDate, toDate]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount / month change
   useEffect(() => { void load(); }, [load]);
+
+  // ?date=YYYY-MM-DD&status=PRESENT|LATE|ABSENT: jump the register to that month
+  // and open the day sheet pre-filtered, like the dashboard's deep link.
+  const params = useLocalSearchParams<{ date?: string; status?: string }>();
+  useEffect(() => {
+    const d = params.date;
+    if (!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return;
+    const [y, m] = d.split('-').map(Number);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot deep link
+    setViewMonth({ month: m - 1, year: y });
+    setModalDate(d);
+    if (params.status) setModalStatus(params.status);
+  }, [params.date, params.status]);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await load();
+    setRefreshing(false);
+  };
 
   const toggleExpanded = async (empId: string) => {
     if (expandedId === empId) { setExpandedId(null); return; }
@@ -639,7 +531,7 @@ export function AdminAttendance() {
         ? await downloadAttendanceReport('daily', { date: today, format })
         : await downloadAttendanceReport('monthly', { month: viewMonth.month + 1, year: viewMonth.year, format });
       if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(uri);
-      setDlMsg({ ok: true, text: `${kind === 'daily' ? 'Daily' : 'Monthly'} ${format.toUpperCase()} ready` });
+      setDlMsg({ ok: true, text: `${kind === 'daily' ? 'Daily' : 'Monthly'} ${format.toUpperCase()} downloaded` });
     } catch {
       setDlMsg({ ok: false, text: `Failed to download ${kind} ${format.toUpperCase()}` });
     } finally {
@@ -651,12 +543,6 @@ export function AdminAttendance() {
   const daysInMonth = new Date(yyyy, viewMonth.month + 1, 0).getDate();
   const firstDow = new Date(yyyy, viewMonth.month, 1).getDay();
   const todayDate = now.getDate();
-
-  const q = search.trim().toLowerCase();
-  const todayRows = todayData
-    ? [...[...todayData.presentees].sort((a, b) => (a.clockIn ?? '').localeCompare(b.clockIn ?? '')), ...todayData.absentees]
-      .filter((p) => !q || p.name.toLowerCase().includes(q))
-    : [];
 
   const registerSummary = useMemo(() => {
     if (!regData) return [];
@@ -674,140 +560,45 @@ export function AdminAttendance() {
   }, [regData]);
 
   return (
-    <View style={styles.flex1}>
-      <View style={styles.headerRow}>
-        <ThemedText type="subtitle">Attendance</ThemedText>
-        <ThemedText type="small" themeColor="textSecondary">
-          {now.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-        </ThemedText>
-      </View>
-
-      <View style={styles.actionsWrap}>
-        {canBulkMark && (
-          <Pressable onPress={() => setBulkMarkOpen(true)} style={[styles.actionChip, { backgroundColor: theme.primary }]}>
-            <ThemedText type="small" style={styles.chipLabelActive}>Bulk Mark Attendance</ThemedText>
-          </Pressable>
-        )}
-        {canImport && (
-          <Pressable onPress={handleImportFile} disabled={importing} style={[styles.actionChip, { backgroundColor: theme.backgroundElement, borderWidth: 1, borderColor: theme.border }]}>
-            <ThemedText type="small">{importing ? 'Importing…' : 'Import from Device'}</ThemedText>
-          </Pressable>
-        )}
-      </View>
-
-      {canDownload && (
-        <View style={styles.actionsWrap}>
-          {(['daily', 'monthly'] as const).map((kind) => (
-            <View key={kind} style={[styles.dlGroup, { borderColor: theme.border }]}>
-              <ThemedText type="small" themeColor="textSecondary" style={styles.dlGroupLabel}>{kind === 'daily' ? 'Daily' : 'Monthly'}</ThemedText>
-              {(['pdf', 'excel'] as const).map((format) => (
-                <Pressable key={format} onPress={() => handleDownload(kind, format)} disabled={dlLoading !== null} style={styles.dlButton}>
-                  <ThemedText type="small" style={{ color: format === 'pdf' ? theme.danger : theme.success }}>
-                    {dlLoading === `${kind}-${format}` ? '…' : format.toUpperCase()}
-                  </ThemedText>
+    <View style={styles.flex1} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
+      <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+        <AdminHeader
+          wide={width >= 560}
+          primaryActions={
+            <>
+              {canBulkMark && (
+                <Pressable onPress={() => setBulkMarkOpen(true)} style={[styles.actionChip, { backgroundColor: theme.primary }]}>
+                  <ThemedText type="small" style={styles.chipLabelActive}>Bulk Mark Attendance</ThemedText>
                 </Pressable>
-              ))}
-            </View>
-          ))}
-        </View>
-      )}
-      {dlMsg && <ThemedText type="small" style={{ color: dlMsg.ok ? theme.success : theme.danger }}>{dlMsg.text}</ThemedText>}
-      {errorMsg && <ThemedText type="small" style={{ color: theme.danger }}>{errorMsg}</ThemedText>}
-
-      <ScrollView contentContainerStyle={styles.content}>
-        {/* Absent Today */}
-        <View style={styles.sectionHeaderRow}>
-          <ThemedText type="smallBold">
-            Absent Today{todayData ? ` (${todayData.absentees.length})` : ''}
-          </ThemedText>
-          {!!todayData?.absentees.length && (
-            <Pressable onPress={copyAbsentees} style={[styles.copyButton, { borderColor: theme.border, backgroundColor: copied ? `${theme.success}18` : theme.backgroundElement }]}>
-              <ThemedText type="small" style={{ color: copied ? theme.success : theme.textSecondary }}>{copied ? '✓ Copied!' : 'Copy'}</ThemedText>
-            </Pressable>
-          )}
-        </View>
-        {loading ? <ActivityIndicator /> : !todayData || todayData.absentees.length === 0 ? (
-          <ThemedText type="small" themeColor="textSecondary">🎉 No absentees today — full house!</ThemedText>
-        ) : (
-          <View style={styles.chipRow}>
-            {todayData.absentees.map((p) => (
-              <View key={p.id} style={[styles.chip, { borderColor: theme.danger, backgroundColor: `${theme.danger}18` }]}>
-                <ThemedText type="small" style={{ color: theme.danger }}>{p.name}</ThemedText>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* Today's Attendance */}
-        <ThemedText type="smallBold" style={styles.sectionTitle}>
-          Today's Attendance
-          {todayData ? ` — ${todayData.counts.present}/${todayData.counts.totalEmployees ?? todayData.counts.total} present${todayData.counts.late > 0 ? ` (${todayData.counts.late} late)` : ''} · ${todayData.counts.absent} absent` : ''}
-        </ThemedText>
-        <TextInput
-          value={search} onChangeText={setSearch} placeholder="Search by name…" placeholderTextColor={theme.textSecondary}
-          style={[styles.input, { color: theme.text, backgroundColor: theme.backgroundElement, borderColor: theme.border, marginBottom: Spacing.two }]}
+              )}
+              {canImport && (
+                <Pressable onPress={handleImportFile} disabled={importing} style={[styles.actionChip, { backgroundColor: theme.backgroundElement, borderWidth: 1, borderColor: theme.border }]}>
+                  <ThemedText type="small">{importing ? 'Importing...' : 'Import from Device'}</ThemedText>
+                </Pressable>
+              )}
+            </>
+          }
+          canDownload={canDownload}
+          monthTitle={`${MONTH_NAMES[viewMonth.month]} ${viewMonth.year}`}
+          dlLoading={dlLoading}
+          dlMsg={dlMsg}
+          onDownload={handleDownload}
         />
-        {loading ? <ActivityIndicator /> : todayRows.length === 0 ? (
-          <ThemedText type="small" themeColor="textSecondary">No records yet for today.</ThemedText>
-        ) : (
-          todayRows.map((p) => {
-            const isExpanded = expandedId === p.id;
-            return (
-              <View key={p.id}>
-                <Pressable onPress={() => toggleExpanded(p.id)} style={[styles.row, { borderColor: theme.border, backgroundColor: isExpanded ? `${theme.primary}10` : 'transparent' }]}>
-                  <View style={[styles.avatarBadge, { backgroundColor: attendanceStatusColor(p.status as any) }]}>
-                    <ThemedText type="small" style={styles.chipLabelActive}>{p.status.slice(0, 2)}</ThemedText>
-                  </View>
-                  <View style={styles.flex1}>
-                    <ThemedText type="smallBold">{p.name}</ThemedText>
-                    <ThemedText type="small" themeColor="textSecondary">{p.role.replace(/_/g, ' ')}</ThemedText>
-                  </View>
-                  <View style={styles.rowRight}>
-                    <ThemedText type="small" themeColor="textSecondary">In: {fmtTime(p.clockIn)}</ThemedText>
-                    <ThemedText type="small" themeColor="textSecondary">Out: {fmtTime(p.clockOut)}</ThemedText>
-                  </View>
-                </Pressable>
-                {isExpanded && (
-                  <View style={[styles.expandedPanel, { backgroundColor: theme.backgroundElement, borderColor: theme.border }]}>
-                    <View style={styles.summaryRow}>
-                      <View style={styles.summaryCell}>
-                        <ThemedText type="small" themeColor="textSecondary">Clock In</ThemedText>
-                        <ThemedText type="smallBold" style={{ color: theme.success }}>{fmtTime(p.clockIn)}</ThemedText>
-                      </View>
-                      <View style={styles.summaryCell}>
-                        <ThemedText type="small" themeColor="textSecondary">Clock Out</ThemedText>
-                        <ThemedText type="smallBold">{fmtTime(p.clockOut)}</ThemedText>
-                      </View>
-                      <View style={styles.summaryCell}>
-                        <ThemedText type="small" themeColor="textSecondary">Total Hours</ThemedText>
-                        <ThemedText type="smallBold" style={{ color: theme.primary }}>{totalHours(p.clockIn, p.clockOut)}</ThemedText>
-                      </View>
-                    </View>
-                    <ThemedText type="small" themeColor="textSecondary" style={{ marginTop: Spacing.two }}>Face Scans Today</ThemedText>
-                    {expandedLoading ? <ActivityIndicator /> : expandedPunches.length > 0 ? (
-                      <View style={styles.chipRow}>
-                        {expandedPunches.map((punch, i) => (
-                          <View key={i} style={[styles.chip, { borderColor: theme.border }]}>
-                            <ThemedText type="small">{punch.direction === 'IN' ? '→' : '←'} {fmtTime(punch.time)}</ThemedText>
-                          </View>
-                        ))}
-                      </View>
-                    ) : (
-                      <ThemedText type="small" themeColor="textSecondary">No scans recorded today</ThemedText>
-                    )}
-                    {canOverride && (
-                      <Pressable
-                        onPress={() => setModalDate(today)}
-                        style={[styles.actionChip, { backgroundColor: theme.primary, marginTop: Spacing.two, alignSelf: 'flex-start' }]}>
-                        <ThemedText type="small" style={styles.chipLabelActive}>Override…</ThemedText>
-                      </Pressable>
-                    )}
-                  </View>
-                )}
-              </View>
-            );
-          })
-        )}
+        {errorMsg ? <ErrorBanner message={errorMsg} onRetry={load} /> : null}
+
+        <AbsentToday data={todayData} loading={loading} copied={copied} onCopy={copyAbsentees} />
+        <TodayAttendance
+          data={todayData}
+          regData={regData}
+          loading={loading}
+          today={today}
+          search={search}
+          onSearch={setSearch}
+          expandedId={expandedId}
+          expandedLoading={expandedLoading}
+          expandedPunches={expandedPunches}
+          onToggle={toggleExpanded}
+        />
 
         {/* Month nav */}
         <View style={styles.monthNav}>
@@ -867,10 +658,7 @@ export function AdminAttendance() {
       </ScrollView>
 
       {modalDate && (
-        <DayView
-          date={modalDate} canOverride={canOverride} myId={myId} myRole={myRole}
-          onClose={() => setModalDate(null)} onOverrideSaved={() => void load()}
-        />
+        <DayModal date={modalDate} initialSearch={search} onSearchChange={setSearch} initialStatus={modalStatus} onClose={() => { setModalDate(null); setModalStatus(null); }} />
       )}
       {monthViewEmployee && (
         <EmployeeMonthView
@@ -894,7 +682,7 @@ const styles = StyleSheet.create({
   dlGroup: { flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderRadius: Radii.md, overflow: 'hidden' },
   dlGroupLabel: { paddingHorizontal: Spacing.two },
   dlButton: { paddingVertical: Spacing.two, paddingHorizontal: Spacing.two },
-  content: { padding: Layout.screenPaddingH, gap: Spacing.two, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', paddingBottom: Spacing.six },
+  content: { padding: Layout.screenPaddingH, gap: 24, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center', paddingBottom: Spacing.six },
   sectionHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.three },
   sectionTitle: { marginTop: Spacing.four },
   copyButton: { paddingVertical: Spacing.one, paddingHorizontal: Spacing.two, borderRadius: Radii.md, borderWidth: 1 },
