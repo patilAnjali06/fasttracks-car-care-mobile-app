@@ -88,6 +88,7 @@ function setProgress(p: SharedValue<number>, value: number) {
 }
 
 function animateTo(p: SharedValue<number>, to: number, onDone?: () => void) {
+  'worklet';
   p.value = withTiming(to, { duration: 240 }, (finished) => {
     'worklet';
     if (finished && onDone) runOnJS(onDone)();
