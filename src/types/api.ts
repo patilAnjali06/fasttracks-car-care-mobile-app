@@ -3738,3 +3738,14 @@ export interface ProbationCheckInDetail extends ProbationCheckIn {
   notes?: string | null;
   completedAt?: string | null;
 }
+
+// ── Tasks page: Daily Tasks with proof (dashboard my-tasks) ──
+export type RecurringTaskProof = 'NONE' | 'PHOTO' | 'NOTE_PHOTO';
+
+// GET /recurring-tasks/my-current rows carry the proof requirement too (lifted
+// from the definition by the API).
+export interface DailyTaskCompletion extends RecurringTaskCompletion {
+  definition: RecurringTaskCompletion['definition'] & { proof?: RecurringTaskProof; proofLabel?: string | null };
+  proof?: RecurringTaskProof;
+  proofLabel?: string | null;
+}

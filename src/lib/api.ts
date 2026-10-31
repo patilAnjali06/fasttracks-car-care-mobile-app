@@ -29,6 +29,7 @@ import type {
   RecurrenceType,
   RecurringTaskCompletion,
   RecurringTaskDefinition,
+  DailyTaskCompletion,
   Task,
   TaskStatus,
   CallCapabilities,
@@ -3875,4 +3876,17 @@ export async function downloadOnboardingPdf(userId: string, name: string): Promi
     throw new Error(`Could not download the checklist PDF (error ${result.status}).`);
   }
   return { uri: result.uri, filename };
+}
+
+// ── Tasks page: Daily Tasks with proof ──
+export async function fetchMyDailyTasks() {
+  const { data } = await api.get<ApiEnvelope<DailyTaskCompletion[]>>('/recurring-tasks/my-current');
+  return data.data;
+}
+
+// `proof` is needed when the task's proof is PHOTO (photo) or NOTE_PHOTO
+// (note + photo); the photo is a data: URL.
+export async function completeDailyTask(completionId: string, proof?: { note?: string; photo?: string; photoMime?: string }) {
+  const { data } = await api.patch<ApiEnvelope<DailyTaskCompletion>>(`/recurring-tasks/completions/${completionId}/complete`, proof ?? {});
+  return data.data;
 }
