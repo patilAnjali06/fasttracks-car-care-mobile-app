@@ -243,6 +243,7 @@ import type {
   CrmCustomerPage,
   CrmSearchBy,
   HandledByEmployee,
+  EmployeeCardItem,
 } from '@/types/api';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -3483,4 +3484,26 @@ export async function fetchCustomerRemarksFor(customerId: string) {
 export async function addCustomerRemarkFor(customerId: string, note: string) {
   const { data } = await api.post<ApiEnvelope<CustomerRemark>>(`/customer-remarks/customer/${customerId}`, { note });
   return data.data;
+}
+
+// ── Team page (dashboard employees/page.tsx) ─────────────────────────────────
+// The list endpoint answers a bare array or { data: [...] }; the dashboard
+// accepts both, so this does too.
+export async function fetchEmployeeCards() {
+  const { data } = await api.get<EmployeeCardItem[] | { data?: EmployeeCardItem[] }>('/employees');
+  return Array.isArray(data) ? data : (data?.data ?? []);
+}
+
+// PUT /employees/:id with exactly the fields the dashboard's edit modal sends
+// (clearing a field means sending null, which updateEmployee's types forbid).
+export async function saveEmployee(id: string, payload: Record<string, unknown>) {
+  const { data } = await api.put<unknown>(`/employees/${id}`, payload);
+  return data;
+}
+
+// PATCH /employees/:id/deactivate with the optional departure date + reason
+// the dashboard captures at deactivation time.
+export async function deactivateEmployeeWithDetails(id: string, fields: { departureDate?: string; departureReason?: string }) {
+  const { data } = await api.patch<unknown>(`/employees/${id}/deactivate`, fields);
+  return data;
 }

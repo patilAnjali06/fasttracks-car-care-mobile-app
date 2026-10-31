@@ -3283,3 +3283,23 @@ export interface CrmCustomerDetail {
   jobCards: CrmVisitJobCard[];
   interactions: CrmInteraction[];
 }
+
+// ── Team page (dashboard employees/page.tsx) ─────────────────────────────────
+// GET /employees returns more than EmployeeListItem declares: the card shows
+// branch and monthly salary, and the edit sheet pre-fills the rest. salary
+// fields are stripped server-side for callers who aren't salary-authorized.
+export interface EmployeeCardItem {
+  id: string;
+  name: string;
+  username: string;
+  role: string;
+  phone: string | null;
+  designation: string | null;
+  isActive: boolean;
+  monthlySalary?: number | null;
+  joiningDate?: string | null;
+  deviceUserId?: string | null;
+  email?: string | null;
+  branch?: string | null;
+  personalEmail?: string | null;
+}
