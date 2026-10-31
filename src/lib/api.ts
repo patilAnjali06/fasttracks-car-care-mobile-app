@@ -243,6 +243,9 @@ import type {
   CrmCustomerPage,
   CrmSearchBy,
   HandledByEmployee,
+  ApplicationFormInput,
+  ApplicationRowData,
+  ApplicationStatusEmailResult,
   EmployeeAnalyticsRaw,
   EmployeeCardItem,
   EmployeePerformancePoint,
@@ -3527,4 +3530,44 @@ export async function fetchEmployeePerformanceChart(id: string) {
 export async function fetchEmployeePunches(userId: string, date: string) {
   const { data } = await api.get<ApiEnvelope<EmployeePunch[]>>('/attendance/punches', { params: { userId, date } });
   return Array.isArray(data.data) ? data.data : [];
+}
+
+// ── Applications page (dashboard applications/page.tsx) ─────────────────────
+// Same GET /applications as fetchApplications, typed with the extra row fields.
+export async function fetchApplicationRows(status?: ApplicationStatus) {
+  const { data } = await api.get<ApiEnvelope<ApplicationRowData[]>>('/applications', { params: status ? { status } : undefined });
+  return data.data ?? [];
+}
+
+// POST /applications (multipart: the fields plus an optional résumé).
+export async function createApplication(fields: ApplicationFormInput, resume?: { uri: string; name: string; mimeType: string } | null) {
+  const form = new FormData();
+  Object.entries(fields).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') form.append(key, String(value));
+  });
+  if (resume) form.append('resume', { uri: resume.uri, name: resume.name, type: resume.mimeType } as any);
+  const { data } = await api.post<ApiEnvelope<ApplicationRowData>>('/applications', form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000,
+  });
+  return data.data;
+}
+
+// PATCH /applications/:id
+export async function updateApplication(id: string, fields: Partial<ApplicationFormInput>) {
+  const { data } = await api.patch<ApiEnvelope<ApplicationRowData>>(`/applications/${id}`, fields);
+  return data.data;
+}
+
+// PATCH /applications/:id/status, keeping the hasEmail flag the dashboard
+// uses to offer the outcome email after Select / Reject.
+export async function changeApplicationStatus(id: string, status: ApplicationStatus) {
+  const { data } = await api.patch<ApiEnvelope<ApplicationRowData & { hasEmail?: boolean }>>(`/applications/${id}/status`, { status });
+  return { application: data.data, message: data.message };
+}
+
+// POST /applications/:id/status-email — HR's "Send Email" / "Resend email".
+export async function sendApplicationStatusEmail(id: string) {
+  const { data } = await api.post<ApiEnvelope<ApplicationStatusEmailResult>>(`/applications/${id}/status-email`);
+  return data.data;
 }

@@ -3329,3 +3329,53 @@ export interface EmployeePunch {
   time: string;
   interpretation?: 'CLOCK_IN' | 'CLOCK_OUT' | 'IGNORED';
 }
+
+// ── Applications page (dashboard applications/page.tsx) ─────────────────────
+// The list endpoint returns more than Application declares; these are the
+// extra fields the dashboard's row and detail view read.
+export interface ApplicationQuestionAnswers {
+  whyJoin?: string;
+  experience?: string;
+  expectedSalary?: string;
+  noticePeriod?: string;
+  preferredLocation?: string;
+  skills?: string;
+  additionalInfo?: string;
+}
+
+export interface ApplicationRowExtras {
+  hasAadhaar?: boolean;
+  aadhaarSelfDeclared?: boolean;
+  aadhaarSelfDeclaredAt?: string | null;
+  candidateQuestionAnswers?: ApplicationQuestionAnswers | null;
+  convertedUser?: { onboardingStatus?: string | null; _count: { onboardingInvitesReceived: number } } | null;
+  aiInterviewScorecard?: AiScorecardSummary | null;
+  aiInterviewCompletedAt?: string | null;
+  aiInterviewQuestions?: unknown;
+  aiAssignmentScorecard?: AiScorecardSummary | null;
+  aiAssignmentCompletedAt?: string | null;
+  interviewInvites?: { engine?: string; status?: string; scorecard?: AiScorecardSummary | null }[];
+}
+
+export type ApplicationRowData = Application & ApplicationRowExtras;
+
+/** Fields the New / Edit Application form sends (dashboard ApplicationFormFields). */
+export interface ApplicationFormInput {
+  name: string;
+  email?: string;
+  phone?: string;
+  roleApplied: string;
+  department?: string;
+  notes?: string;
+  dateOfBirth?: string;
+  currentAddress?: string;
+  permanentAddress?: string;
+  fresher: boolean;
+}
+
+/** POST /applications/:id/status-email */
+export interface ApplicationStatusEmailResult {
+  emailSent: boolean;
+  sentTo: string | null;
+  hasEmail?: boolean;
+}

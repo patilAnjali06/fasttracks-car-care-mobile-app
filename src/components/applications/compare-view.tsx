@@ -40,14 +40,16 @@ function scoreOf(c: CompareCandidate, key: SortKey): number | null {
 
 // Read-only candidate comparison for one role. Stages the backend returns as
 // null render as "not yet completed" — never as 0.
-export function CompareView({ statusLabels, onBack }: {
+export function CompareView({ statusLabels, onBack, initialRole }: {
   statusLabels: Record<ApplicationStatus, string>;
   onBack: () => void;
+  /** Open straight on one role (the row's own Compare button); empty/omitted = pick a role. */
+  initialRole?: string;
 }) {
   const theme = useTheme();
   const [roles, setRoles] = useState<RoleCoverage[] | null>(null);
   const [rolesError, setRolesError] = useState<string | null>(null);
-  const [role, setRole] = useState<string | null>(null);
+  const [role, setRole] = useState<string | null>(initialRole || null);
   const [candidates, setCandidates] = useState<CompareCandidate[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>('screening');
@@ -74,7 +76,8 @@ export function CompareView({ statusLabels, onBack }: {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
     loadRoles();
-  }, [loadRoles]);
+    if (initialRole) loadCandidates(initialRole);
+  }, [loadRoles, loadCandidates, initialRole]);
 
   const sorted = useMemo(() => {
     if (!candidates) return [];
