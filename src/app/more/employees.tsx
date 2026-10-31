@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AddEmployeeSheet } from '@/components/employees/add-employee-sheet';
 import { EditEmployeeSheet } from '@/components/employees/edit-employee-sheet';
+import { EmployeeDetailPanel } from '@/components/employees/employee-detail-panel';
 import { AddRemarkSheet, DeactivateSheet, DeleteSheet, ResetPasswordSheet } from '@/components/employees/employee-action-sheets';
 import { EmployeeCard, type CardFlags } from '@/components/employees/employee-card';
 import { GlassCard } from '@/components/home/glass-card';
@@ -133,6 +134,7 @@ export default function EmployeesScreen() {
   const [resetEmp, setResetEmp] = useState<EmployeeCardItem | null>(null);
   const [deactivateEmp, setDeactivateEmp] = useState<EmployeeCardItem | null>(null);
   const [deleteEmp, setDeleteEmp] = useState<EmployeeCardItem | null>(null);
+  const [detailEmp, setDetailEmp] = useState<EmployeeCardItem | null>(null);
   const [selected, setSelected] = useState<EmployeeDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -487,10 +489,7 @@ export default function EmployeesScreen() {
   const openReset = useCallback((e: EmployeeCardItem) => setResetEmp(e), []);
   const openDeactivate = useCallback((e: EmployeeCardItem) => setDeactivateEmp(e), []);
   const openDelete = useCallback((e: EmployeeCardItem) => setDeleteEmp(e), []);
-  // "View Details" opens the existing detail view for now.
-  // onSelect only reads state setters and the session-constant role gate, so a stable wrapper is safe.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const openDetails = useCallback((e: EmployeeCardItem) => { onSelect(e.id); }, []);
+  const openDetails = useCallback((e: EmployeeCardItem) => setDetailEmp(e), []);
   const renderCard = useCallback(({ item }: { item: EmployeeCardItem }) => (
     <View style={cell}>
       <EmployeeCard emp={item} flags={cardFlags} onEdit={openEdit} onDetails={openDetails} onRemark={openRemark} onReset={openReset} onDeactivate={openDeactivate} onDelete={openDelete} />
@@ -927,6 +926,15 @@ export default function EmployeesScreen() {
       {remarkEmp ? <AddRemarkSheet employee={remarkEmp} onClose={() => setRemarkEmp(null)} /> : null}
       {resetEmp ? <ResetPasswordSheet employee={resetEmp} onClose={() => setResetEmp(null)} /> : null}
       {deactivateEmp ? <DeactivateSheet employee={deactivateEmp} onClose={() => setDeactivateEmp(null)} onDone={load} /> : null}
+      {detailEmp ? (
+        <EmployeeDetailPanel
+          employee={detailEmp}
+          // Dashboard rule: the Owner, or a store manager looking at someone who is neither Owner nor store manager.
+          canEdit={isOwner || (isStoreManager && detailEmp.role !== 'OWNER' && detailEmp.role !== 'STORE_MANAGER')}
+          onClose={() => setDetailEmp(null)}
+          onOpenLegacy={onSelect}
+        />
+      ) : null}
       {deleteEmp ? <DeleteSheet employee={deleteEmp} onClose={() => setDeleteEmp(null)} onDone={load} /> : null}
     </ThemedView>
   );

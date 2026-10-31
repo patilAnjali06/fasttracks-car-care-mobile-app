@@ -243,7 +243,10 @@ import type {
   CrmCustomerPage,
   CrmSearchBy,
   HandledByEmployee,
+  EmployeeAnalyticsRaw,
   EmployeeCardItem,
+  EmployeePerformancePoint,
+  EmployeePunch,
 } from '@/types/api';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -3506,4 +3509,22 @@ export async function saveEmployee(id: string, payload: Record<string, unknown>)
 export async function deactivateEmployeeWithDetails(id: string, fields: { departureDate?: string; departureReason?: string }) {
   const { data } = await api.patch<unknown>(`/employees/${id}/deactivate`, fields);
   return data;
+}
+
+// ── Employee detail panel, Overview tab ─────────────────────────────────────
+// requireManagerOrOwner on both analytics routes.
+export async function fetchEmployeeAnalytics(id: string) {
+  const { data } = await api.get<ApiEnvelope<EmployeeAnalyticsRaw>>(`/employees/${id}/analytics`);
+  return data.data;
+}
+
+export async function fetchEmployeePerformanceChart(id: string) {
+  const { data } = await api.get<ApiEnvelope<EmployeePerformancePoint[]>>(`/employees/${id}/performance-chart`);
+  return Array.isArray(data.data) ? data.data : [];
+}
+
+// Same route as fetchAttendancePunches, typed with the "interpretation" field it returns.
+export async function fetchEmployeePunches(userId: string, date: string) {
+  const { data } = await api.get<ApiEnvelope<EmployeePunch[]>>('/attendance/punches', { params: { userId, date } });
+  return Array.isArray(data.data) ? data.data : [];
 }

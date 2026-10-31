@@ -3297,9 +3297,35 @@ export interface EmployeeCardItem {
   designation: string | null;
   isActive: boolean;
   monthlySalary?: number | null;
+  salaryType?: string | null;
   joiningDate?: string | null;
   deviceUserId?: string | null;
   email?: string | null;
   branch?: string | null;
   personalEmail?: string | null;
+}
+
+// ── Employee detail panel, Overview tab (dashboard EmployeeDetailPanel) ─────
+// GET /employees/:id/analytics (nested shape; the panel flattens it).
+export interface EmployeeAnalyticsRaw {
+  jobs?: { thisMonth?: number };
+  financial?: { revenueGenerated?: number; averageDealSize?: number };
+  performance?: { conversionRate?: number; walkOutRate?: number; mostCommonService?: string | null };
+  attendance?: { present?: number; late?: number; absent?: number; halfDay?: number };
+}
+
+// GET /employees/:id/performance-chart — last six months.
+export interface EmployeePerformancePoint {
+  month: string;
+  label: string;
+  jobCount: number;
+  revenue: number;
+}
+
+// GET /attendance/punches — "interpretation" says which scan counted as the clock-in/out.
+export interface EmployeePunch {
+  id: string;
+  direction: string;
+  time: string;
+  interpretation?: 'CLOCK_IN' | 'CLOCK_OUT' | 'IGNORED';
 }
