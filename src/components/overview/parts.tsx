@@ -1,17 +1,18 @@
 import { Children, type ReactNode } from 'react';
-import { Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Badge, Card, Skeleton } from '@/components/ui';
 import { Fonts, FontWeights, Radii, Spacing, withAlpha } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
+import { useContentWidth } from '@/lib/drawer-context';
 import { statusLook } from '@/lib/overview-format';
 
 // Tailwind "sm" breakpoint, used wherever the dashboard has an sm: class.
 export const SM_BREAKPOINT = 640;
 
 export function useIsTablet() {
-  return useWindowDimensions().width >= SM_BREAKPOINT;
+  return useContentWidth() >= SM_BREAKPOINT;
 }
 
 // Stat cards: 2 per row on a phone, 4 per row at sm+ (override with

@@ -8,6 +8,7 @@ import {
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider, type Theme } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
+import { View } from 'react-native';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 
@@ -17,7 +18,7 @@ import { MenuButton } from '@/components/menu-button';
 import { SideMenu } from '@/components/side-menu';
 import { Colors } from '@/constants/theme';
 import { AuthProvider, useAuth } from '@/lib/auth-context';
-import { DrawerProvider } from '@/lib/drawer-context';
+import { DrawerProvider, useIsDocked } from '@/lib/drawer-context';
 import { PermissionsProvider } from '@/lib/permissions-context';
 import { subscribeToNotificationTaps } from '@/lib/push-notifications';
 
@@ -49,6 +50,7 @@ const FasttracksDarkTheme: Theme = {
 
 function RootNavigator() {
   const { isReady, isAuthenticated } = useAuth();
+  const docked = useIsDocked();
   const [fontsLoaded] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
@@ -67,6 +69,10 @@ function RootNavigator() {
   if (!isReady || !fontsLoaded) return null;
 
   return (
+    <View style={{ flex: 1, flexDirection: 'row' }}>
+      {/* Wide screens: the sidebar is docked on the left and the screens sit to its right. */}
+      {isAuthenticated && docked ? <SideMenu variant="docked" /> : null}
+      <View style={{ flex: 1 }}>
     <Stack>
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Protected guard={!isAuthenticated}>
@@ -90,6 +96,8 @@ function RootNavigator() {
         <Stack.Screen name="more" options={{ headerShown: false }} />
       </Stack.Protected>
     </Stack>
+      </View>
+    </View>
   );
 }
 
@@ -102,7 +110,7 @@ export default function RootLayout() {
           <PermissionsProvider>
             <DrawerProvider>
               <RootNavigator />
-              <SideMenu />
+              <SideMenu variant="overlay" />
             </DrawerProvider>
           </PermissionsProvider>
         </AuthProvider>

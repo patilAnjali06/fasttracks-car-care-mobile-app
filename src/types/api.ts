@@ -3188,3 +3188,98 @@ export interface CustomerStatsReport {
     byEmployee: { name: string; employeeId: string | null; walkouts: number; totalJobs: number; walkoutRate: number }[];
   };
 }
+
+// ── Customers & Jobs (dashboard customers/page.tsx parity) ───────────────────
+export type BoardStage = 'CREATED' | 'QUOTED' | 'HANDED_OVER' | 'COLLECTED' | 'WALKED_OUT';
+
+export interface CjJobInvoice {
+  id: string;
+  invoiceNumber: string;
+  grandTotal: number;
+  balanceDue?: number;
+  status: string;
+}
+
+// GET /job-cards/active and GET /job-cards/board (raw JSON arrays).
+export interface CjJobCard {
+  id: string;
+  jobNumber: string;
+  vehicleNumber: string;
+  reasonForVisit: string;
+  status: JobCardStatus;
+  createdAt: string;
+  invoiceId?: string | null;
+  invoice?: CjJobInvoice | null;
+  walkoutReason?: string | null;
+  walkoutNote?: string | null;
+  customerRole?: 'OWNER' | 'DRIVER' | null;
+  customer: { id: string; name: string; phone: string };
+  vehicle?: { id: string; vehicleNumber: string; make?: string | null; model?: string | null } | null;
+  handledBy: { id: string; name: string; role?: string };
+  mediaCount?: number;
+  boardStage: BoardStage;
+  boardWalkoutReason?: string | null;
+  boardWalkoutRemarks?: string | null;
+}
+
+// GET /employees/handled-by — any logged-in user.
+export interface HandledByEmployee {
+  id: string;
+  name: string;
+  role: string;
+}
+
+// GET /crm/customers (paged, searchBy name|phone|vehicleNumber|vehicleModel).
+export type CrmSearchBy = 'name' | 'phone' | 'vehicleNumber' | 'vehicleModel';
+
+export interface CrmCustomerRow {
+  id: string;
+  name: string;
+  phone: string;
+  email?: string | null;
+  source?: string | null;
+  isRegular: boolean;
+  visitCount: number;
+  isActive: boolean;
+  createdAt: string;
+  totalSpent?: number;
+  invoiceCount?: number;
+  vehicles: { id: string; vehicleNumber: string; make?: string | null; model?: string | null; isActive: boolean }[];
+  crmInvoices: { id: string; invoiceNumber: string; grandTotal: number; paidAmount?: number; status: string; createdAt: string }[];
+}
+
+export interface CrmCustomerPage {
+  customers: CrmCustomerRow[];
+  total: number;
+}
+
+export interface CrmVisitJobCard {
+  id: string;
+  jobNumber: string;
+  vehicleNumber: string;
+  reasonForVisit: string;
+  status: JobCardStatus;
+  createdAt: string;
+  invoiceId?: string | null;
+  walkoutReason?: string | null;
+  walkoutNote?: string | null;
+  estimatedTotal?: number | null;
+  handledBy: { id: string; name: string; designation?: string | null };
+  vehicle?: { vehicleNumber: string; make?: string | null; model?: string | null; year?: string | null } | null;
+  invoice?: { id: string; invoiceNumber: string; grandTotal: number; paidAmount: number; balanceDue: number; status: string } | null;
+}
+
+export interface CrmInteraction {
+  id: string;
+  description: string;
+  createdAt: string;
+  createdBy: { id: string; name: string };
+  jobCard?: { id: string; jobNumber: string; vehicleNumber: string; reasonForVisit: string } | null;
+  quotes: { amount: string; sortOrder: number }[];
+}
+
+// GET /crm/customers/:id — only the parts the panel reads.
+export interface CrmCustomerDetail {
+  jobCards: CrmVisitJobCard[];
+  interactions: CrmInteraction[];
+}

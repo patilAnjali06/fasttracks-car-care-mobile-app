@@ -237,6 +237,12 @@ import type {
   RegenerateCompetencyTemplateInput,
   CustomerStatsReport,
   DailyReport,
+  BoardStage,
+  CjJobCard,
+  CrmCustomerDetail,
+  CrmCustomerPage,
+  CrmSearchBy,
+  HandledByEmployee,
 } from '@/types/api';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -3426,5 +3432,55 @@ export async function fetchDailyReport(date: string) {
 
 export async function fetchCustomerStats(fromDate: string, toDate: string) {
   const { data } = await api.get<ApiEnvelope<CustomerStatsReport>>('/reports/customer-stats', { params: { fromDate, toDate } });
+  return data.data;
+}
+
+// ── Customers & Jobs (dashboard customers/page.tsx parity) ───────────────────
+// All gated server-side by hasCJAccess/getCJMode (view_only blocks writes,
+// sales_mode scopes to own jobs); raw JSON, no ApiEnvelope.
+export async function fetchActiveJobCards() {
+  const { data } = await api.get<CjJobCard[]>('/job-cards/active');
+  return Array.isArray(data) ? data : [];
+}
+
+export async function fetchBoardJobCards() {
+  const { data } = await api.get<CjJobCard[]>('/job-cards/board');
+  return Array.isArray(data) ? data : [];
+}
+
+// Status board stage change. boardWalkoutReason is required for WALKED_OUT.
+export async function setJobBoardStage(id: string, stage: BoardStage, walkout?: { boardWalkoutReason: string; boardWalkoutRemarks?: string }) {
+  const { data } = await api.patch<CjJobCard>(`/job-cards/${id}/board-stage`, { stage, ...walkout });
+  return data;
+}
+
+// Same list New Entry uses for "handled by" — feeds the inline reassign picker.
+export async function fetchHandledByEmployees() {
+  const { data } = await api.get<HandledByEmployee[]>('/employees/handled-by');
+  return Array.isArray(data) ? data : [];
+}
+
+export async function fetchCrmCustomerPage(params: { page: number; limit: number; search?: string; searchBy?: CrmSearchBy; fromDate?: string; toDate?: string; source?: string }) {
+  const { search, searchBy, ...rest } = params;
+  const { data } = await api.get<CrmCustomerPage>('/crm/customers', {
+    params: { ...rest, ...(search?.trim() ? { search: search.trim(), searchBy } : {}), fromDate: rest.fromDate || undefined, toDate: rest.toDate || undefined, source: rest.source || undefined },
+  });
+  return data;
+}
+
+// GET /crm/customers/:id — job cards (with invoice summaries) + logged interactions.
+export async function fetchCrmCustomerDetail(id: string): Promise<CrmCustomerDetail> {
+  const { data } = await api.get<Partial<CrmCustomerDetail>>(`/crm/customers/${id}`);
+  return { jobCards: data.jobCards ?? [], interactions: data.interactions ?? [] };
+}
+
+// Verification remarks (requireCustomerRemarksAccess), customer-level.
+export async function fetchCustomerRemarksFor(customerId: string) {
+  const { data } = await api.get<ApiEnvelope<CustomerRemark[]>>(`/customer-remarks/customer/${customerId}`);
+  return data.data;
+}
+
+export async function addCustomerRemarkFor(customerId: string, note: string) {
+  const { data } = await api.post<ApiEnvelope<CustomerRemark>>(`/customer-remarks/customer/${customerId}`, { note });
   return data.data;
 }
