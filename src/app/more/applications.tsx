@@ -175,7 +175,7 @@ export default function ApplicationsScreen() {
   const goOnboarding = useCallback((a: ApplicationRowData) => router.push({ pathname: '/more/onboarding', params: { tab: onboardingNotStarted(a) ? 'prejoining' : 'documents', userId: a.convertedUserId ?? '' } } as never), [router]);
   const openSchedule = useCallback((a: ApplicationRowData) => setScheduleFor(a), []);
   // The competency template editor lives on the Competencies screen.
-  const createTemplate = useCallback(() => router.push('/more/competencies' as never), [router]);
+  const createTemplate = useCallback((role: string) => router.push({ pathname: '/more/competencies', params: { newRole: role } } as never), [router]);
   const dismissStatusEmail = useCallback(() => setStatusEmail(null), []);
 
   const renderRow = useCallback(({ item }: { item: ApplicationRowData }) => (
