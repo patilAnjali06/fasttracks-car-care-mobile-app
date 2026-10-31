@@ -3,13 +3,14 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { fmtDate } from '@/components/applications/application-format';
 import { getAvatarColor, getInitials } from '@/components/employees/employee-format';
+import { OnboardingDetailSheet } from '@/components/onboarding/onboarding-detail';
 import { ErrorBanner } from '@/components/overview/parts';
 import { ThemedText } from '@/components/themed-text';
 import { Card, Skeleton } from '@/components/ui';
-import { FontWeights, Radii } from '@/constants/theme';
+import { FontWeights } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { fetchOnboardingChecklist, fetchOnboardingOverview, getErrorMessage, setOnboardingTaskDone } from '@/lib/api';
-import type { OnboardingChecklist, OnboardingOverviewItem, OnboardingTask } from '@/types/api';
+import { fetchOnboardingOverview, getErrorMessage } from '@/lib/api';
+import type { OnboardingOverviewItem } from '@/types/api';
 
 const DONE_COLOR = '#167A48';
 const TWO_COLS_MIN = 560;
@@ -53,15 +54,6 @@ export function ChecklistTab({ initialUserId, refreshKey }: Props) {
     load();
   }, [load, refreshKey]);
 
-  if (selected) {
-    return (
-      <ChecklistDetail
-        userId={selected}
-        onBack={() => { setSelected(null); load(); }}
-      />
-    );
-  }
-
   const cols = width >= THREE_COLS_MIN ? 3 : width >= TWO_COLS_MIN ? 2 : 1;
   const rows: OnboardingOverviewItem[][] = [];
   for (let i = 0; i < (items?.length ?? 0); i += cols) rows.push((items ?? []).slice(i, i + cols));
@@ -94,93 +86,7 @@ export function ChecklistTab({ initialUserId, refreshKey }: Props) {
           {Array.from({ length: cols - row.length }).map((_, k) => <View key={`pad-${k}`} style={styles.cell} />)}
         </View>
       ))}
-    </View>
-  );
-}
-
-// The existing per-person checklist (task toggling), unchanged in behaviour.
-// Phase 2 replaces it with the dashboard's OnboardingDetailModal.
-function ChecklistDetail({ userId, onBack }: { userId: string; onBack: () => void }) {
-  const theme = useTheme();
-  const [checklist, setChecklist] = useState<OnboardingChecklist | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [toggleError, setToggleError] = useState<string | null>(null);
-
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      setChecklist(await fetchOnboardingChecklist(userId));
-    } catch (err: unknown) {
-      setError(getErrorMessage(err, 'Could not load the onboarding checklist.'));
-    }
-  }, [userId]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount
-    load();
-  }, [load]);
-
-  const patchTask = (taskId: string, patch: Partial<OnboardingTask>) =>
-    setChecklist((c) => (c ? { ...c, tasks: c.tasks.map((t) => (t.id === taskId ? { ...t, ...patch } : t)) } : c));
-
-  const toggle = async (task: OnboardingTask) => {
-    const next = !task.isDone;
-    setToggleError(null);
-    patchTask(task.id, { isDone: next }); // optimistic; reverted if the server refuses
-    try {
-      setChecklist(await setOnboardingTaskDone(task.id, next));
-    } catch (err: unknown) {
-      patchTask(task.id, { isDone: task.isDone });
-      setToggleError(getErrorMessage(err, 'Could not update the task.'));
-    }
-  };
-
-  const done = checklist?.tasks.filter((t) => t.isDone).length ?? 0;
-  const total = checklist?.tasks.length ?? 0;
-  const complete = total > 0 && done === total;
-
-  return (
-    <View style={styles.stack}>
-      <Pressable onPress={onBack} accessibilityRole="button" style={styles.back}>
-        <ThemedText style={[styles.small, { color: theme.primary }]}>← All onboarding</ThemedText>
-      </Pressable>
-      {error ? <ErrorBanner message={error} onRetry={load} /> : null}
-      {!error && !checklist ? <Card padding="md"><Skeleton height={16} width="50%" /><Skeleton height={8} /></Card> : null}
-      {checklist ? (
-        <>
-          <Card padding="md">
-            <ThemedText style={styles.name}>{checklist.user.name}</ThemedText>
-            <ThemedText themeColor="textMuted" style={styles.small}>{[checklist.user.designation, checklist.user.employeeId].filter(Boolean).join(' · ') || '—'}</ThemedText>
-            <ThemedText themeColor="textMuted" style={styles.small}>{`Started ${fmtDate(checklist.createdAt)} by ${checklist.createdBy.name}`}</ThemedText>
-            <ProgressBar done={done} total={total} />
-            <ThemedText style={[styles.small, complete && { color: DONE_COLOR }]}>
-              {complete ? `Onboarding complete${checklist.completedAt ? ` · ${fmtDate(checklist.completedAt)}` : ''}` : `${done}/${total} tasks done`}
-            </ThemedText>
-          </Card>
-          {toggleError ? <ErrorBanner message={toggleError} /> : null}
-          {checklist.tasks.length === 0 ? <ThemedText themeColor="textMuted" style={styles.small}>This checklist has no tasks.</ThemedText> : null}
-          {checklist.tasks.map((task) => (
-            <Card key={task.id} padding="sm">
-              <View style={styles.task}>
-                <Pressable
-                  onPress={() => toggle(task)}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: task.isDone }}
-                  hitSlop={10}
-                  style={[styles.checkbox, { borderColor: task.isDone ? DONE_COLOR : theme.textSecondary, backgroundColor: task.isDone ? DONE_COLOR : 'transparent' }]}>
-                  {task.isDone ? <ThemedText style={styles.check}>✓</ThemedText> : null}
-                </Pressable>
-                <View style={styles.flex1}>
-                  <ThemedText style={[styles.name, task.isDone && styles.struck]}>{task.title}</ThemedText>
-                  {task.description ? <ThemedText themeColor="textMuted" style={styles.small}>{task.description}</ThemedText> : null}
-                  {task.responsible ? <ThemedText themeColor="textMuted" style={styles.small}>{`Responsible: ${task.responsible}`}</ThemedText> : null}
-                  {task.isDone && task.doneAt ? <ThemedText themeColor="textMuted" style={styles.small}>{`Done ${fmtDate(task.doneAt)}`}</ThemedText> : null}
-                </View>
-              </View>
-            </Card>
-          ))}
-        </>
-      ) : null}
+      {selected ? <OnboardingDetailSheet userId={selected} onClose={() => setSelected(null)} onChanged={load} /> : null}
     </View>
   );
 }
@@ -198,9 +104,4 @@ const styles = StyleSheet.create({
   initials: { color: '#fff', fontSize: 13, lineHeight: 16, fontFamily: FontWeights.bold },
   track: { height: 8, borderRadius: 4, overflow: 'hidden', marginVertical: 8 },
   fill: { height: '100%', borderRadius: 4 },
-  back: { minHeight: 44, justifyContent: 'center' },
-  task: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  checkbox: { width: 26, height: 26, borderRadius: Radii.sm, borderWidth: 2, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  check: { color: '#fff', fontSize: 16, lineHeight: 20, fontFamily: FontWeights.bold },
-  struck: { textDecorationLine: 'line-through' },
 });

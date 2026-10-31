@@ -171,7 +171,8 @@ export default function ApplicationsScreen() {
     setExpiryFor(a);
   }, []);
   // Opens Onboarding with this candidate already selected.
-  const goOnboarding = useCallback((a: ApplicationRowData) => router.push({ pathname: '/more/onboarding', params: { userId: a.convertedUserId ?? '' } } as never), [router]);
+  // Start Onboarding -> Pre-Joining Terms (the first step); View Candidate -> Documents. Same as the dashboard.
+  const goOnboarding = useCallback((a: ApplicationRowData) => router.push({ pathname: '/more/onboarding', params: { tab: onboardingNotStarted(a) ? 'prejoining' : 'documents', userId: a.convertedUserId ?? '' } } as never), [router]);
   const openSchedule = useCallback((a: ApplicationRowData) => setScheduleFor(a), []);
   // The competency template editor lives on the Competencies screen.
   const createTemplate = useCallback(() => router.push('/more/competencies' as never), [router]);

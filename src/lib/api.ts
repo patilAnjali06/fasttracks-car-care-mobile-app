@@ -265,6 +265,17 @@ import type {
   OnboardingInviteStatusInfo,
   PreJoiningTermsLite,
   ProbationCheckIn,
+  CandidateVerificationQueueItem,
+  DisciplineRecord,
+  DisciplineRecordType,
+  EmploymentDetails,
+  EmploymentUpdate,
+  IdentityDocumentStatus,
+  OnboardingDocument,
+  PreJoiningTerms,
+  PreJoiningTermsInput,
+  ProbationCheckInDetail,
+  ProbationMilestone,
 } from '@/types/api';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -3741,4 +3752,127 @@ export async function fetchCheckInOverviewCounts() {
 export async function fetchProbationCheckIns() {
   const { data } = await api.get<ApiEnvelope<ProbationCheckIn[]>>('/probation-checkins');
   return data.data ?? [];
+}
+
+// ── Onboarding Phase 2 (dashboard hrAPI / identityDocumentsAPI / preJoiningTermsAPI) ──
+export async function fetchEmploymentDetails(userId: string) {
+  const { data } = await api.get<ApiEnvelope<EmploymentDetails>>(`/hr/employment/${userId}`);
+  return data.data;
+}
+
+export async function updateEmploymentDetails(userId: string, fields: EmploymentUpdate) {
+  const { data } = await api.patch<ApiEnvelope<EmploymentDetails>>(`/hr/employment/${userId}`, fields);
+  return data.data;
+}
+
+export async function fetchPreJoiningTerms(userId: string) {
+  const { data } = await api.get<ApiEnvelope<PreJoiningTerms | null>>(`/pre-joining-terms/${userId}`);
+  return data.data ?? null;
+}
+
+export async function savePreJoiningTerms(userId: string, fields: PreJoiningTermsInput) {
+  const { data } = await api.put<ApiEnvelope<PreJoiningTerms>>(`/pre-joining-terms/${userId}`, fields);
+  return data.data;
+}
+
+export async function approvePreJoiningTerms(userId: string) {
+  const { data } = await api.post<ApiEnvelope<PreJoiningTerms>>(`/pre-joining-terms/${userId}/approve`);
+  return data.data;
+}
+
+export async function fetchOnboardingDocuments(userId: string) {
+  const { data } = await api.get<ApiEnvelope<OnboardingDocument[]>>(`/identity-documents/${userId}`);
+  return data.data ?? [];
+}
+
+export async function fetchAllOnboardingDocuments(status?: IdentityDocumentStatus) {
+  const { data } = await api.get<ApiEnvelope<OnboardingDocument[]>>('/identity-documents', { params: status ? { status } : undefined });
+  return data.data ?? [];
+}
+
+export async function setOnboardingDocumentStatus(documentId: string, status: IdentityDocumentStatus, rejectionReason?: string) {
+  const { data } = await api.patch<ApiEnvelope<OnboardingDocument>>(`/identity-documents/file/${documentId}/status`, { status, rejectionReason });
+  return data.data;
+}
+
+// HR upload with the dashboard's full field set: type, label, number (encrypted
+// server-side), bank IFSC / branch. The file is optional for types where a
+// number alone is enough.
+export async function uploadOnboardingDocument(
+  userId: string,
+  file: { uri: string; name: string; mimeType: string } | null,
+  type: IdentityDocType,
+  extra: { label?: string; value?: string; ifsc?: string; branch?: string },
+  ctrl: { onProgress: (pct: number | null) => void; signal: AbortSignal },
+) {
+  const form = new FormData();
+  form.append('type', type);
+  if (file) form.append('file', { uri: file.uri, name: file.name, type: file.mimeType } as any);
+  if (extra.label) form.append('label', extra.label);
+  if (extra.value) form.append('value', extra.value);
+  if (extra.ifsc) form.append('ifsc', extra.ifsc);
+  if (extra.branch) form.append('branch', extra.branch);
+  const { data } = await api.post<ApiEnvelope<OnboardingDocument>>(`/identity-documents/${userId}`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000,
+    signal: ctrl.signal,
+    onUploadProgress: (evt) => ctrl.onProgress(progressToPercent(evt)),
+  });
+  return data.data;
+}
+
+// The file route needs the Bearer header, so it is saved to the cache first
+// (same approach as downloadLetterPdf) and then opened / shared.
+export async function downloadIdentityDocumentFile(documentId: string, serverFilename?: string | null): Promise<{ uri: string; filename: string }> {
+  const token = await tokenStorage.get();
+  const safe = (serverFilename ?? 'document').replace(/[^\w.\-]+/g, '_');
+  const filename = `identity-${documentId}-${safe}`;
+  const dest = `${FileSystem.cacheDirectory}${filename}`;
+  const result = await FileSystem.downloadAsync(`${API_BASE_URL}/identity-documents/file/${documentId}`, dest, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (result.status < 200 || result.status >= 300) {
+    await FileSystem.deleteAsync(result.uri, { idempotent: true }).catch(() => {});
+    throw new Error(result.status === 404 ? 'This document is no longer available.' : `Could not download the file (error ${result.status}).`);
+  }
+  return { uri: result.uri, filename: serverFilename || filename };
+}
+
+export async function fetchVerificationQueue() {
+  const { data } = await api.get<ApiEnvelope<CandidateVerificationQueueItem[]>>('/hr/candidates/verification-queue');
+  return data.data ?? [];
+}
+
+export async function fetchDisciplineRecords(userId: string) {
+  const { data } = await api.get<ApiEnvelope<DisciplineRecord[]>>(`/hr/discipline/${userId}`);
+  return data.data ?? [];
+}
+
+export async function addDisciplineRecord(userId: string, fields: { type: DisciplineRecordType; description: string; date: string }) {
+  const { data } = await api.post<ApiEnvelope<DisciplineRecord>>(`/hr/discipline/${userId}`, fields);
+  return data.data;
+}
+
+export async function fetchProbationCheckInDetails() {
+  const { data } = await api.get<ApiEnvelope<ProbationCheckInDetail[]>>('/probation-checkins');
+  return data.data ?? [];
+}
+
+export async function completeProbationCheckIn(userId: string, milestone: ProbationMilestone, fields: { rating?: number; notes?: string }) {
+  const { data } = await api.post<ApiEnvelope<ProbationCheckInDetail>>(`/probation-checkins/${userId}/${milestone}/complete`, fields);
+  return data.data;
+}
+
+export async function downloadOnboardingPdf(userId: string, name: string): Promise<{ uri: string; filename: string }> {
+  const token = await tokenStorage.get();
+  const filename = `onboarding-${name.replace(/[^\w.\-]+/g, '_')}-${userId}.pdf`;
+  const dest = `${FileSystem.cacheDirectory}${filename}`;
+  const result = await FileSystem.downloadAsync(`${API_BASE_URL}/hr/onboarding/${userId}/pdf`, dest, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (result.status < 200 || result.status >= 300) {
+    await FileSystem.deleteAsync(result.uri, { idempotent: true }).catch(() => {});
+    throw new Error(`Could not download the checklist PDF (error ${result.status}).`);
+  }
+  return { uri: result.uri, filename };
 }

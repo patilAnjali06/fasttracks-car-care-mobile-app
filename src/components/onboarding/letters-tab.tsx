@@ -16,6 +16,19 @@ import {
 } from '@/lib/api';
 import type { Candidate, HRLetter, HRLetterType, IssuedLetterSummary, OnboardingEmployee, OnboardingInviteResult, OnboardingInviteStatusInfo } from '@/types/api';
 
+// Downloads a letter PDF and hands it to the device share / open-with sheet.
+// Resolves to an error message, or null on success.
+export async function openLetterPdf(letterId: string, type: HRLetterType): Promise<string | null> {
+  try {
+    const { uri } = await downloadLetterPdf(letterId, LETTER_TYPE_LABELS[type]);
+    if (!(await Sharing.isAvailableAsync())) return 'Sharing isn’t available on this device.';
+    await Sharing.shareAsync(uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf' });
+    return null;
+  } catch (err: unknown) {
+    return getErrorMessage(err, 'Could not open the letter.');
+  }
+}
+
 type Props = {
   employees: OnboardingEmployee[];
   initialUserId?: string;
@@ -90,14 +103,7 @@ export function LettersTab({ employees, initialUserId, onVerifyDocuments, refres
   // View PDF and Share both hand the downloaded file to the device's share /
   // open-with sheet (the same approach as the other screens' documents).
   const openPdf = useCallback(async (letterId: string, type: HRLetterType) => {
-    setFileError(null);
-    try {
-      const { uri } = await downloadLetterPdf(letterId, LETTER_TYPE_LABELS[type]);
-      if (await Sharing.isAvailableAsync()) await Sharing.shareAsync(uri, { mimeType: 'application/pdf', UTI: 'com.adobe.pdf' });
-      else setFileError('Sharing isn’t available on this device.');
-    } catch (err: unknown) {
-      setFileError(getErrorMessage(err, 'Could not open the letter.'));
-    }
+    setFileError(await openLetterPdf(letterId, type));
   }, []);
 
   // Candidates sit in the same picker; employeeId "Candidate" is display-only.
@@ -205,7 +211,7 @@ export function LettersTab({ employees, initialUserId, onVerifyDocuments, refres
 }
 
 // One letter, as a stacked row: [name] type badge, issued date + issuer, actions.
-function LetterRow({ id, type, issuedAt, issuedBy, employee, last, onView, onShare, onSelectEmployee }: {
+export function LetterRow({ id, type, issuedAt, issuedBy, employee, last, onView, onShare, onSelectEmployee }: {
   id: string; type: HRLetterType; issuedAt: string; issuedBy: string; last: boolean;
   employee?: { userId: string; label: string };
   onView: (id: string, type: HRLetterType) => void;

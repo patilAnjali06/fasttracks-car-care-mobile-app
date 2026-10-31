@@ -4,18 +4,23 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-n
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ADMIN_ROLES } from '@/components/applications/application-format';
+import { CheckInsTab } from '@/components/onboarding/checkins-tab';
 import { ChecklistTab } from '@/components/onboarding/checklist-tab';
+import { DisciplineTab } from '@/components/onboarding/discipline-tab';
+import { DocumentsTab } from '@/components/onboarding/documents-tab';
+import { EmploymentTab } from '@/components/onboarding/employment-tab';
 import { LettersTab } from '@/components/onboarding/letters-tab';
-import { BUILT_TABS, TABS, type CheckInFilter, type OverviewTarget, type TabKey } from '@/components/onboarding/onboarding-format';
+import { TABS, type CheckInFilter, type OverviewTarget, type TabKey } from '@/components/onboarding/onboarding-format';
+import { PreJoiningTab } from '@/components/onboarding/prejoining-tab';
+import { VerificationTab } from '@/components/onboarding/verification-tab';
 import { OverviewTab } from '@/components/onboarding/overview-tab';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Card } from '@/components/ui';
 import { FontWeights, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
 import { fetchOnboardingEmployees } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
-import type { OnboardingEmployee } from '@/types/api';
+import type { OnboardingEmployee, ProbationMilestone } from '@/types/api';
 
 const WIDE_MIN = 560;
 const isTabKey = (v: unknown): v is TabKey => TABS.some((t) => t.key === v);
@@ -36,10 +41,17 @@ export default function OnboardingScreen() {
 
   const [tab, setTab] = useState<TabKey>(startTab);
   const [employees, setEmployees] = useState<OnboardingEmployee[]>([]);
-  const [lettersUserId, setLettersUserId] = useState(startTab === 'letters' ? startUser : '');
-  const [onboardingUserId, setOnboardingUserId] = useState(startTab === 'onboarding' ? startUser : '');
-  // Phase 2 tabs keep their targets so the cards/rows already route correctly.
-  const [, setCheckInTarget] = useState<{ filter: CheckInFilter; userId?: string } | null>(null);
+  // Each tab keeps its own selected person (like the dashboard) so jumping
+  // between tabs and deep links land on that person.
+  const userFor = (t: TabKey) => (startTab === t ? startUser : '');
+  const [lettersUserId, setLettersUserId] = useState(userFor('letters'));
+  const [onboardingUserId, setOnboardingUserId] = useState(userFor('onboarding'));
+  const [docsUserId, setDocsUserId] = useState(userFor('documents'));
+  const [employmentUserId, setEmploymentUserId] = useState(userFor('employment'));
+  const [preJoiningUserId, setPreJoiningUserId] = useState(userFor('prejoining'));
+  const [disciplineUserId, setDisciplineUserId] = useState(userFor('discipline'));
+  // Set when an Overview card opens Check-ins pre-filtered; part of the tab's remount key.
+  const [checkIn, setCheckIn] = useState<{ filter: CheckInFilter; userId: string; milestone?: ProbationMilestone }>({ filter: 'ALL', userId: startTab === 'checkins' ? startUser : '' });
   const [width, setWidth] = useState(0);
   const [refreshKey, setRefreshKey] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -53,7 +65,10 @@ export default function OnboardingScreen() {
   const openFromOverview = (target: OverviewTarget) => {
     if (target.tab === 'onboarding') setOnboardingUserId(target.userId ?? '');
     if (target.tab === 'letters') setLettersUserId(target.userId ?? '');
-    if (target.tab === 'checkins') setCheckInTarget({ filter: target.checkInFilter, userId: target.userId });
+    if (target.tab === 'checkins') setCheckIn({ filter: target.checkInFilter, userId: target.userId ?? '', milestone: target.milestone });
+    if (target.tab === 'documents') setDocsUserId(target.userId);
+    if (target.tab === 'employment') setEmploymentUserId(target.userId);
+    if (target.tab === 'prejoining' && target.userId) setPreJoiningUserId(target.userId);
     setTab(target.tab);
   };
 
@@ -61,7 +76,7 @@ export default function OnboardingScreen() {
     // The tab strip clears a pre-selected person, like the dashboard.
     if (key === 'letters') setLettersUserId('');
     if (key === 'onboarding') setOnboardingUserId('');
-    if (key === 'checkins') setCheckInTarget(null);
+    if (key === 'checkins') setCheckIn({ filter: 'ALL', userId: '' });
     setTab(key);
   };
 
@@ -129,11 +144,36 @@ export default function OnboardingScreen() {
             refreshKey={refreshKey}
             onVerifyDocuments={(userId) => openFromOverview({ tab: 'documents', userId })}
           />
-        ) : !BUILT_TABS.includes(tab) ? (
-          <Card padding="lg">
-            <ThemedText style={styles.comingTitle}>{TABS.find((t) => t.key === tab)?.label}</ThemedText>
-            <ThemedText themeColor="textMuted" style={styles.subtitle}>Coming next.</ThemedText>
-          </Card>
+        ) : tab === 'documents' ? (
+          <DocumentsTab
+            employees={employees}
+            userId={docsUserId}
+            onUserIdChange={setDocsUserId}
+            refreshKey={refreshKey}
+            onAllMandatoryVerified={(userId) => openFromOverview({ tab: 'letters', userId })}
+          />
+        ) : tab === 'employment' ? (
+          <EmploymentTab employees={employees} userId={employmentUserId} onUserIdChange={setEmploymentUserId} refreshKey={refreshKey} />
+        ) : tab === 'prejoining' ? (
+          <PreJoiningTab
+            employees={employees}
+            userId={preJoiningUserId}
+            onUserIdChange={setPreJoiningUserId}
+            refreshKey={refreshKey}
+            onApproved={(userId) => openFromOverview({ tab: 'letters', userId })}
+          />
+        ) : tab === 'verification' ? (
+          <VerificationTab refreshKey={refreshKey} onOpenDocuments={(userId) => openFromOverview({ tab: 'documents', userId })} />
+        ) : tab === 'discipline' ? (
+          <DisciplineTab employees={employees} userId={disciplineUserId} onUserIdChange={setDisciplineUserId} refreshKey={refreshKey} />
+        ) : tab === 'checkins' ? (
+          <CheckInsTab
+            key={`${checkIn.filter}:${checkIn.userId}:${checkIn.milestone ?? ''}`}
+            initialFilter={checkIn.filter}
+            initialUserId={checkIn.userId || undefined}
+            initialMilestone={checkIn.milestone}
+            refreshKey={refreshKey}
+          />
         ) : null}
       </ScrollView>
     </ThemedView>
@@ -149,5 +189,4 @@ const styles = StyleSheet.create({
   tabBar: { gap: 8 },
   tab: { paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 2, marginBottom: -1, minHeight: 44, justifyContent: 'center' },
   tabLabel: { fontSize: 14, lineHeight: 20, fontFamily: FontWeights.medium },
-  comingTitle: { fontSize: 16, lineHeight: 22, fontFamily: FontWeights.semiBold },
 });

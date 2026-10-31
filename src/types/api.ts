@@ -3608,3 +3608,133 @@ export interface ProbationCheckIn {
   dueDate: string;
   status: ProbationCheckInStatus;
 }
+
+// ── Onboarding Phase 2: Employment, Pre-Joining Terms, Documents, Discipline, Check-ins ──
+export type EmploymentType = 'FULL_TIME' | 'PART_TIME' | 'CONTRACT' | 'INTERN';
+export type EmploymentStatus = 'PROBATION' | 'CONFIRMED' | 'NOTICE_PERIOD' | 'EXITED';
+
+export interface EducationEntry {
+  qualification: string;
+  institution: string;
+  yearOfPassing: number;
+  score?: string;
+}
+
+export interface WorkExperienceEntry {
+  company: string;
+  designation: string;
+  /** YYYY-MM */
+  fromDate: string;
+  /** YYYY-MM; absent = still working there */
+  toDate?: string;
+  reasonForLeaving?: string;
+}
+
+// GET /hr/employment/:userId
+export interface EmploymentDetails {
+  id: string;
+  designation?: string | null;
+  department?: string | null;
+  branch?: string | null;
+  joiningDate?: string | null;
+  employmentType?: EmploymentType | null;
+  employmentStatus?: EmploymentStatus | null;
+  probationEndDate?: string | null;
+  reportingManagerId?: string | null;
+  coreResponsibilities?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactRelationship?: string | null;
+  emergencyContactPhone?: string | null;
+  educationDetails?: EducationEntry[] | null;
+  workExperience?: WorkExperienceEntry[] | null;
+  passportPlaceOfIssue?: string | null;
+  passportExpiryDate?: string | null;
+}
+
+export interface EmploymentUpdate {
+  designation: string | null;
+  department: string | null;
+  branch: string | null;
+  joiningDate: string | null;
+  employmentType: EmploymentType | null;
+  employmentStatus: EmploymentStatus | null;
+  probationEndDate: string | null;
+  reportingManagerId: string | null;
+  coreResponsibilities: string | null;
+  emergencyContactName: string | null;
+  emergencyContactRelationship: string | null;
+  emergencyContactPhone: string | null;
+}
+
+export type PreJoiningTermsStatus = 'DRAFT' | 'APPROVED';
+
+export interface PreJoiningTerms {
+  id: string;
+  userId: string;
+  status: PreJoiningTermsStatus;
+  monthlySalary?: number | null;
+  salaryType?: string | null;
+  employmentType?: EmploymentType | null;
+  jobLocation?: string | null;
+  dateOfJoining?: string | null;
+  probationMonths?: number | null;
+  workingHours?: string | null;
+  roster?: string | null;
+  approvedBy?: { id: string; name: string } | null;
+  approvedAt?: string | null;
+}
+
+export interface PreJoiningTermsInput {
+  monthlySalary: string | null;
+  salaryType: string | null;
+  employmentType: EmploymentType | null;
+  jobLocation: string | null;
+  dateOfJoining: string | null;
+  probationMonths: string | null;
+  workingHours: string | null;
+  roster: string | null;
+}
+
+export type IdentityDocumentStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
+
+// GET /identity-documents/:userId and the cross-employee queue (HR view).
+export interface OnboardingDocument {
+  id: string;
+  type: IdentityDocType;
+  label?: string | null;
+  filename?: string | null;
+  mimeType?: string | null;
+  fileSize?: number | null;
+  createdAt: string;
+  status: IdentityDocumentStatus;
+  verifiedAt?: string | null;
+  rejectionReason?: string | null;
+  hasValue: boolean;
+  maskedValue?: string | null;
+  bankIfsc?: string | null;
+  bankBranch?: string | null;
+  uploadedBy: { id: string; name: string };
+  verifiedBy?: { id: string; name: string } | null;
+  user?: { id: string; name: string; employeeId?: string | null; designation?: string | null };
+}
+
+export interface CandidateVerificationQueueItem extends Candidate {
+  documentsSummary: { required: number; verified: number; pending: number; missing: number; rejectedTypes: string[] };
+  daysSinceStatusChange: number;
+}
+
+export type DisciplineRecordType = 'WARNING' | 'POLICY_ACKNOWLEDGEMENT' | 'DISCIPLINARY_ACTION' | 'OTHER';
+
+export interface DisciplineRecord {
+  id: string;
+  type: DisciplineRecordType;
+  description: string;
+  date: string;
+  issuedBy: { id: string; name: string };
+}
+
+export interface ProbationCheckInDetail extends ProbationCheckIn {
+  rating?: number | null;
+  notes?: string | null;
+  completedAt?: string | null;
+}
