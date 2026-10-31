@@ -3494,3 +3494,117 @@ export interface HrChatMessage {
   role: 'user' | 'assistant';
   content: string;
 }
+
+// ── Onboarding page (dashboard onboarding/page.tsx): Overview, Letters, candidates ──
+export type OnboardingStatus = 'INVITED' | 'IN_PROGRESS' | 'SUBMITTED' | 'HR_REVIEW' | 'APPROVED' | 'REJECTED';
+export type HRLetterType = 'OFFER' | 'EXPERIENCE' | 'RELIEVING' | 'LETTER_OF_INTENT' | 'LETTER_OF_ONBOARDING';
+
+// GET /employees rows as the Letters picker reads them (same endpoint as EmployeeListItem).
+export interface OnboardingEmployee {
+  id: string;
+  name: string;
+  employeeId: string | null;
+  role: string;
+  isActive: boolean;
+  designation?: string | null;
+  joiningDate?: string | null;
+  department?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  personalPhone?: string | null;
+  emergencyContactPhone?: string | null;
+}
+
+export interface Candidate {
+  id: string;
+  name: string;
+  personalEmail?: string | null;
+  personalPhone?: string | null;
+  department?: string | null;
+  address?: string | null;
+  emergencyContactPhone?: string | null;
+  onboardingStatus: OnboardingStatus;
+  isActive: boolean;
+  createdAt: string;
+  daysSinceInvited?: number | null;
+  overdue?: boolean;
+}
+
+export type CandidateOverviewMetric = 'inPipeline' | 'pendingVerification' | 'rejectedAwaitingReupload' | 'overdue';
+
+export interface CandidateOverviewCounts {
+  inPipeline: number;
+  pendingVerification: number;
+  rejectedAwaitingReupload: number;
+  overdue: number;
+}
+
+export interface CandidateOverviewListItem {
+  id: string;
+  name: string;
+  personalEmail: string | null;
+  personalPhone: string | null;
+  onboardingStatus: OnboardingStatus;
+  createdAt: string;
+  daysWaiting: number | null;
+  waitingOn: 'candidate' | 'hr';
+  rejectedDocuments: string[];
+}
+
+export interface IssuedLetterSummary {
+  id: string;
+  userId: string;
+  type: HRLetterType;
+  issuedAt: string;
+  user: { id: string; name: string; employeeId: string | null };
+  issuedBy: { id: string; name: string };
+}
+
+export interface HRLetter {
+  id: string;
+  userId: string;
+  type: HRLetterType;
+  issuedAt: string;
+  issuedBy: { id: string; name: string };
+  letterInvite?: { inviteLink: string; expiresAt: string; emailSent: boolean } | null;
+}
+
+export type OnboardingInviteStatus = 'PENDING' | 'USED' | 'REVOKED' | 'EXPIRED';
+
+export interface OnboardingInviteStatusInfo {
+  id: string;
+  status: OnboardingInviteStatus;
+  expiresAt: string;
+  createdAt: string;
+  usedAt?: string | null;
+}
+
+export interface OnboardingInviteResult {
+  inviteLink: string;
+  expiresAt: string;
+  emailSent: boolean;
+  sentTo: string | null;
+  hasEmail: boolean;
+}
+
+// Pre-Joining Terms: only what the Letters prefill reads.
+export interface PreJoiningTermsLite {
+  status: string;
+  monthlySalary?: number | null;
+  employmentType?: string | null;
+  jobLocation?: string | null;
+  dateOfJoining?: string | null;
+  probationMonths?: number | null;
+}
+
+export type ProbationMilestone = 'DAY_7' | 'DAY_30' | 'DAY_60' | 'DAY_90';
+export type ProbationCheckInStatus = 'OVERDUE' | 'DUE_SOON' | 'COMPLETED' | 'NOT_YET_DUE';
+
+export interface ProbationCheckIn {
+  userId: string;
+  employee: { id: string; name: string; employeeId?: string | null; designation?: string | null };
+  reportingManager?: { id: string; name: string } | null;
+  milestone: ProbationMilestone;
+  dueDate: string;
+  status: ProbationCheckInStatus;
+}

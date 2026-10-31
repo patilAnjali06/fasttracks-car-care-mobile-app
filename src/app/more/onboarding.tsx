@@ -1,285 +1,153 @@
-import { Stack, useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { GlassCard } from '@/components/home/glass-card';
+import { ADMIN_ROLES } from '@/components/applications/application-format';
+import { ChecklistTab } from '@/components/onboarding/checklist-tab';
+import { LettersTab } from '@/components/onboarding/letters-tab';
+import { BUILT_TABS, TABS, type CheckInFilter, type OverviewTarget, type TabKey } from '@/components/onboarding/onboarding-format';
+import { OverviewTab } from '@/components/onboarding/overview-tab';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { MaxContentWidth, Spacing, Layout } from '@/constants/theme';
+import { Card } from '@/components/ui';
+import { FontWeights, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import {
-  fetchOnboardingChecklist,
-  fetchOnboardingOverview,
-  getErrorMessage,
-  setOnboardingTaskDone,
-} from '@/lib/api';
+import { fetchOnboardingEmployees } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
-import type { OnboardingChecklist, OnboardingOverviewItem, OnboardingTask } from '@/types/api';
+import type { OnboardingEmployee } from '@/types/api';
 
-// Whole /hr router is router.use(verifyToken, requireHROrOwner) =
-// OWNER/STORE_MANAGER/HR/ACCOUNTING (backend/src/routes/hr.ts,
-// middleware/auth.ts) — a static role check, so this is the static-role
-// pattern (see leave-requests.tsx), not usePermissions().
-const ONBOARDING_ROLES = ['OWNER', 'STORE_MANAGER', 'HR', 'ACCOUNTING'];
-
-const DONE_COLOR = '#167A48';
-
-function fmtDate(d?: string | null) {
-  if (!d) return '—';
-  return new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function ProgressBar({ done, total }: { done: number; total: number }) {
-  const theme = useTheme();
-  const pct = total ? Math.round((done / total) * 100) : 0;
-  return (
-    <View style={[styles.barTrack, { backgroundColor: theme.backgroundElement }]}>
-      <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: pct === 100 ? DONE_COLOR : theme.primary }]} />
-    </View>
-  );
-}
-
-function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
-  return (
-    <GlassCard>
-      <ThemedText style={styles.error}>{message}</ThemedText>
-      <Pressable onPress={onRetry} style={styles.button}>
-        <ThemedText style={styles.buttonLabel}>Retry</ThemedText>
-      </Pressable>
-    </GlassCard>
-  );
-}
-
-function ChecklistDetail({ userId, onBack }: { userId: string; onBack: () => void }) {
-  const insets = useSafeAreaInsets();
-  const theme = useTheme();
-  const [checklist, setChecklist] = useState<OnboardingChecklist | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [toggleError, setToggleError] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      setChecklist(await fetchOnboardingChecklist(userId));
-    } catch (err: any) {
-      setError(getErrorMessage(err, 'Could not load the onboarding checklist.'));
-    }
-  }, [userId]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount
-    load();
-  }, [load]);
-
-  const onRefresh = async () => {
-    setIsRefreshing(true);
-    await load();
-    setIsRefreshing(false);
-  };
-
-  const patchTask = (taskId: string, patch: Partial<OnboardingTask>) =>
-    setChecklist((c) => (c ? { ...c, tasks: c.tasks.map((t) => (t.id === taskId ? { ...t, ...patch } : t)) } : c));
-
-  const toggle = async (task: OnboardingTask) => {
-    const next = !task.isDone;
-    setToggleError(null);
-    // Optimistic — flip locally, revert just this task if the server refuses.
-    patchTask(task.id, { isDone: next });
-    try {
-      setChecklist(await setOnboardingTaskDone(task.id, next));
-    } catch (err: any) {
-      patchTask(task.id, { isDone: task.isDone });
-      setToggleError(getErrorMessage(err, 'Could not update the task.'));
-    }
-  };
-
-  const done = checklist?.tasks.filter((t) => t.isDone).length ?? 0;
-  const total = checklist?.tasks.length ?? 0;
-  const isComplete = total > 0 && done === total;
-
-  return (
-    <ScrollView
-      contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.three }]}
-      refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
-    >
-      <Pressable onPress={onBack} style={styles.backLink}>
-        <ThemedText type="small">← All onboarding</ThemedText>
-      </Pressable>
-
-      {error ? (
-        <ErrorState message={error} onRetry={load} />
-      ) : checklist === null ? (
-        <ActivityIndicator style={styles.spinner} />
-      ) : (
-        <>
-          <GlassCard>
-            <ThemedText type="smallBold">{checklist.user.name}</ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              {[checklist.user.designation, checklist.user.employeeId].filter(Boolean).join(' · ') || '—'}
-            </ThemedText>
-            <ThemedText type="small" themeColor="textSecondary">
-              Started {fmtDate(checklist.createdAt)} by {checklist.createdBy.name}
-            </ThemedText>
-            <View style={styles.barWrap}>
-              <ProgressBar done={done} total={total} />
-            </View>
-            <ThemedText type="small" style={isComplete ? { color: DONE_COLOR } : undefined}>
-              {isComplete
-                ? `Onboarding complete${checklist.completedAt ? ` · ${fmtDate(checklist.completedAt)}` : ''}`
-                : `${done}/${total} tasks done`}
-            </ThemedText>
-          </GlassCard>
-
-          {toggleError && <ThemedText style={styles.error}>{toggleError}</ThemedText>}
-
-          {checklist.tasks.length === 0 ? (
-            <ThemedText type="small" themeColor="textSecondary">This checklist has no tasks.</ThemedText>
-          ) : (
-            checklist.tasks.map((task) => (
-              <ThemedView key={task.id} type="backgroundElement" style={styles.row}>
-                <Pressable
-                  onPress={() => toggle(task)}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: task.isDone }}
-                  hitSlop={8}
-                  style={[
-                    styles.checkbox,
-                    { borderColor: task.isDone ? DONE_COLOR : theme.textSecondary, backgroundColor: task.isDone ? DONE_COLOR : 'transparent' },
-                  ]}>
-                  {task.isDone && <ThemedText style={styles.checkMark}>✓</ThemedText>}
-                </Pressable>
-                <View style={styles.flex1}>
-                  <ThemedText type="smallBold" style={task.isDone ? styles.struck : undefined}>{task.title}</ThemedText>
-                  {task.description ? (
-                    <ThemedText type="small" themeColor="textSecondary">{task.description}</ThemedText>
-                  ) : null}
-                  {task.responsible ? (
-                    <ThemedText type="small" themeColor="textSecondary">Responsible: {task.responsible}</ThemedText>
-                  ) : null}
-                  {task.isDone && task.doneAt ? (
-                    <ThemedText type="small" themeColor="textSecondary">Done {fmtDate(task.doneAt)}</ThemedText>
-                  ) : null}
-                </View>
-              </ThemedView>
-            ))
-          )}
-        </>
-      )}
-    </ScrollView>
-  );
-}
+const WIDE_MIN = 560;
+const isTabKey = (v: unknown): v is TabKey => TABS.some((t) => t.key === v);
 
 export default function OnboardingScreen() {
+  const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { user } = useAuth();
-  const allowed = ONBOARDING_ROLES.includes(user?.role ?? '');
+  // 4 roles only — this page carries salary / ID-number / approval data (dashboard ADMIN_ROLES).
+  const allowed = ADMIN_ROLES.includes(user?.role ?? '');
 
-  const [items, setItems] = useState<OnboardingOverviewItem[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  // The Applications screen opens this with ?userId= to land on that person's checklist.
-  const { userId: userIdParam } = useLocalSearchParams<{ userId?: string }>();
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(userIdParam || null);
+  // Deep links: ?tab=…&userId=… (Applications "View Candidate" / "Start Onboarding");
+  // a bare ?userId= still lands on that person's checklist, as before.
+  const params = useLocalSearchParams<{ tab?: string; userId?: string }>();
+  const startTab: TabKey = isTabKey(params.tab) ? params.tab : params.userId ? 'onboarding' : 'overview';
+  const startUser = params.userId || '';
 
-  const load = useCallback(async () => {
-    setError(null);
-    try {
-      setItems(await fetchOnboardingOverview());
-    } catch (err: any) {
-      setError(getErrorMessage(err, 'Could not load onboarding checklists.'));
-    }
-  }, []);
+  const [tab, setTab] = useState<TabKey>(startTab);
+  const [employees, setEmployees] = useState<OnboardingEmployee[]>([]);
+  const [lettersUserId, setLettersUserId] = useState(startTab === 'letters' ? startUser : '');
+  const [onboardingUserId, setOnboardingUserId] = useState(startTab === 'onboarding' ? startUser : '');
+  // Phase 2 tabs keep their targets so the cards/rows already route correctly.
+  const [, setCheckInTarget] = useState<{ filter: CheckInFilter; userId?: string } | null>(null);
+  const [width, setWidth] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const tabBar = useRef<ScrollView>(null);
 
   useEffect(() => {
     if (!allowed) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount
-    load();
-  }, [allowed, load]);
+    fetchOnboardingEmployees().then(setEmployees).catch(() => setEmployees([]));
+  }, [allowed, refreshKey]);
 
-  const onRefresh = async () => {
-    setIsRefreshing(true);
-    await load();
-    setIsRefreshing(false);
+  const openFromOverview = (target: OverviewTarget) => {
+    if (target.tab === 'onboarding') setOnboardingUserId(target.userId ?? '');
+    if (target.tab === 'letters') setLettersUserId(target.userId ?? '');
+    if (target.tab === 'checkins') setCheckInTarget({ filter: target.checkInFilter, userId: target.userId });
+    setTab(target.tab);
+  };
+
+  const pressTab = (key: TabKey) => {
+    // The tab strip clears a pre-selected person, like the dashboard.
+    if (key === 'letters') setLettersUserId('');
+    if (key === 'onboarding') setOnboardingUserId('');
+    if (key === 'checkins') setCheckInTarget(null);
+    setTab(key);
+  };
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    setRefreshKey((k) => k + 1);
+    setTimeout(() => setRefreshing(false), 800);
   };
 
   if (!allowed) {
     return (
-      <View style={[styles.content, styles.flex1]}>
+      <ThemedView style={styles.flex1}>
         <Stack.Screen options={{ title: 'Onboarding' }} />
-        <ThemedText type="small" themeColor="textSecondary">
-          Onboarding is available to Owner, Store Manager, HR and Accounting roles only.
-        </ThemedText>
-      </View>
+        <View style={styles.denied}>
+          <ThemedText type="small" themeColor="textSecondary">
+            Onboarding is available to Owner, Store Manager, HR and Accounting roles only.
+          </ThemedText>
+        </View>
+      </ThemedView>
     );
   }
 
-  if (selectedUserId) {
-    return (
-      <View style={styles.flex1}>
-        <Stack.Screen options={{ title: 'Onboarding' }} />
-        <ChecklistDetail
-          userId={selectedUserId}
-          onBack={() => {
-            setSelectedUserId(null);
-            load();
-          }}
-        />
-      </View>
-    );
-  }
+  const pad = width >= WIDE_MIN ? Spacing.four : Spacing.three;
 
   return (
-    <View style={styles.flex1}>
+    <ThemedView style={styles.flex1} onLayout={(e) => setWidth(e.nativeEvent.layout.width)}>
       <Stack.Screen options={{ title: 'Onboarding' }} />
-      <ScrollView
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + Spacing.three }]}
-        refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={onRefresh} />}
-      >
-        <ThemedText type="small" themeColor="textSecondary">Onboarding checklists currently in progress.</ThemedText>
+      <View style={{ paddingHorizontal: pad, paddingTop: pad }}>
+        <ThemedText style={styles.title}>Onboarding</ThemedText>
+        <ThemedText themeColor="textMuted" style={styles.subtitle}>Offer &amp; experience letters and onboarding checklists.</ThemedText>
+      </View>
 
-        {error ? (
-          <ErrorState message={error} onRetry={load} />
-        ) : items === null ? (
-          <ActivityIndicator style={styles.spinner} />
-        ) : items.length === 0 ? (
-          <ThemedText type="small" themeColor="textSecondary">No onboarding checklists in progress.</ThemedText>
-        ) : (
-          items.map((c) => (
-            <Pressable key={c.id} onPress={() => setSelectedUserId(c.userId)}>
-              <ThemedView type="backgroundElement" style={styles.overviewRow}>
-                <ThemedText type="smallBold" numberOfLines={1} ellipsizeMode="tail">{c.user.name}</ThemedText>
-                <ThemedText type="small" themeColor="textSecondary" numberOfLines={1} ellipsizeMode="tail">
-                  {c.user.designation || c.user.employeeId || '—'}
-                </ThemedText>
-                <ProgressBar done={c.completedTasks} total={c.totalTasks} />
-                <ThemedText type="small" themeColor="textSecondary">
-                  {c.completedTasks}/{c.totalTasks} tasks · started {fmtDate(c.createdAt)}
-                </ThemedText>
-              </ThemedView>
-            </Pressable>
-          ))
-        )}
+      <View style={[styles.tabBarWrap, { borderBottomColor: theme.border, marginHorizontal: pad }]}>
+        <ScrollView ref={tabBar} horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={styles.tabBar}>
+          {TABS.map((t) => {
+            const active = tab === t.key;
+            return (
+              <Pressable
+                key={t.key}
+                onPress={() => pressTab(t.key)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: active }}
+                style={[styles.tab, { borderBottomColor: active ? theme.primary : 'transparent' }]}>
+                <ThemedText style={[styles.tabLabel, { color: active ? theme.primary : theme.textMuted }]}>{t.label}</ThemedText>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      <ScrollView
+        style={{ backgroundColor: theme.background }}
+        contentContainerStyle={{ padding: pad, paddingBottom: insets.bottom + Spacing.four }}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}>
+        {tab === 'overview' ? (
+          <OverviewTab employees={employees} onOpen={openFromOverview} onViewDetails={() => router.push('/more/employees' as never)} refreshKey={refreshKey} />
+        ) : tab === 'onboarding' ? (
+          <ChecklistTab key={onboardingUserId} initialUserId={onboardingUserId} refreshKey={refreshKey} />
+        ) : tab === 'letters' ? (
+          <LettersTab
+            key={lettersUserId}
+            employees={employees}
+            initialUserId={lettersUserId}
+            refreshKey={refreshKey}
+            onVerifyDocuments={(userId) => openFromOverview({ tab: 'documents', userId })}
+          />
+        ) : !BUILT_TABS.includes(tab) ? (
+          <Card padding="lg">
+            <ThemedText style={styles.comingTitle}>{TABS.find((t) => t.key === tab)?.label}</ThemedText>
+            <ThemedText themeColor="textMuted" style={styles.subtitle}>Coming next.</ThemedText>
+          </Card>
+        ) : null}
       </ScrollView>
-    </View>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   flex1: { flex: 1 },
-  content: { padding: Spacing.three, gap: Layout.cardGap, width: '100%', maxWidth: MaxContentWidth, alignSelf: 'center' },
-  spinner: { marginTop: Spacing.three },
-  error: { color: '#B83030', marginTop: Spacing.one },
-  button: { marginTop: Spacing.two, height: 48, borderRadius: Spacing.two, backgroundColor: '#7A1C2E', alignItems: 'center', justifyContent: 'center' },
-  buttonLabel: { color: '#ffffff', fontWeight: '600' },
-  backLink: { minHeight: Layout.minTouchTarget, justifyContent: 'center' },
-  barTrack: { height: 8, borderRadius: 4, overflow: 'hidden' },
-  barFill: { height: '100%', borderRadius: 4 },
-  barWrap: { marginVertical: Spacing.two },
-  overviewRow: { borderRadius: Spacing.three, padding: Spacing.three, gap: Spacing.one, minHeight: Layout.minTouchTarget },
-  row: { flexDirection: 'row', alignItems: 'flex-start', borderRadius: Spacing.three, padding: Spacing.three, minHeight: Layout.minTouchTarget, gap: Spacing.three },
-  checkbox: { width: 26, height: 26, borderRadius: 6, borderWidth: 2, alignItems: 'center', justifyContent: 'center', marginTop: 2 },
-  checkMark: { color: '#ffffff', fontWeight: '700', fontSize: 16, lineHeight: 20 },
-  struck: { textDecorationLine: 'line-through' },
+  denied: { padding: Spacing.three },
+  title: { fontSize: 24, lineHeight: 32, fontFamily: FontWeights.bold },
+  subtitle: { fontSize: 14, lineHeight: 20, marginTop: 2 },
+  tabBarWrap: { borderBottomWidth: 1, marginTop: Spacing.three },
+  tabBar: { gap: 8 },
+  tab: { paddingHorizontal: 16, paddingVertical: 10, borderBottomWidth: 2, marginBottom: -1, minHeight: 44, justifyContent: 'center' },
+  tabLabel: { fontSize: 14, lineHeight: 20, fontFamily: FontWeights.medium },
+  comingTitle: { fontSize: 16, lineHeight: 22, fontFamily: FontWeights.semiBold },
 });

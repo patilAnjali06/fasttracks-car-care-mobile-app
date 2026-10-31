@@ -253,6 +253,18 @@ import type {
   EmployeeCardItem,
   EmployeePerformancePoint,
   EmployeePunch,
+  Candidate,
+  CandidateOverviewCounts,
+  CandidateOverviewListItem,
+  CandidateOverviewMetric,
+  HRLetter,
+  HRLetterType,
+  IssuedLetterSummary,
+  OnboardingEmployee,
+  OnboardingInviteResult,
+  OnboardingInviteStatusInfo,
+  PreJoiningTermsLite,
+  ProbationCheckIn,
 } from '@/types/api';
 
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -3629,4 +3641,104 @@ export function downloadInterviewRecording(applicationId: string, inviteId: stri
 
 export function downloadAnswerRecording(applicationId: string, inviteId: string, turnIndex: number) {
   return downloadRecording(`/applications/${applicationId}/interview-invite/${inviteId}/answer-recording/${turnIndex}`, `answer-${inviteId}-${turnIndex}.audio`);
+}
+
+// ── Onboarding page: Overview counts, Letters, candidates (dashboard hrAPI) ──
+
+
+export async function fetchOnboardingEmployees() {
+  const { data } = await api.get<ApiEnvelope<OnboardingEmployee[]>>('/employees');
+  return (data.data ?? []).filter((e) => e.isActive);
+}
+
+export async function fetchCandidateOverviewCounts() {
+  const { data } = await api.get<ApiEnvelope<CandidateOverviewCounts>>('/hr/candidates/overview-counts');
+  return data.data;
+}
+
+export async function fetchCandidateOverviewList(metric: CandidateOverviewMetric) {
+  const { data } = await api.get<ApiEnvelope<CandidateOverviewListItem[]>>('/hr/candidates/overview-list', { params: { metric } });
+  return data.data;
+}
+
+export async function fetchLettersCount() {
+  const { data } = await api.get<ApiEnvelope<{ count: number }>>('/hr/letters/count');
+  return data.data.count;
+}
+
+export async function fetchAllLetters() {
+  const { data } = await api.get<ApiEnvelope<IssuedLetterSummary[]>>('/hr/letters');
+  return data.data;
+}
+
+export async function fetchLetterHistory(userId: string) {
+  const { data } = await api.get<ApiEnvelope<HRLetter[]>>(`/hr/letters/${userId}`);
+  return data.data;
+}
+
+export async function generateLetter(userId: string, type: HRLetterType, fields: Record<string, unknown>) {
+  const { data } = await api.post<ApiEnvelope<HRLetter>>(`/hr/letters/${userId}`, { type, ...fields });
+  return data.data;
+}
+
+export async function emailLetter(letterId: string) {
+  const { data } = await api.post<ApiEnvelope<{ sentTo: string }>>(`/hr/letters/file/${letterId}/email`);
+  return data.data?.sentTo ?? null;
+}
+
+// GET /hr/letters/file/:id streams the PDF behind the Bearer token; saved to
+// the cache the same way as downloadApplicationFile so it can be opened/shared.
+export async function downloadLetterPdf(letterId: string, label: string): Promise<{ uri: string; filename: string }> {
+  const token = await tokenStorage.get();
+  const filename = `${label.replace(/[^\w.\-]+/g, '_')}-${letterId}.pdf`;
+  const dest = `${FileSystem.cacheDirectory}${filename}`;
+  const result = await FileSystem.downloadAsync(`${API_BASE_URL}/hr/letters/file/${letterId}`, dest, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (result.status < 200 || result.status >= 300) {
+    await FileSystem.deleteAsync(result.uri, { idempotent: true }).catch(() => {});
+    throw new Error(result.status === 404 ? 'This letter is no longer available.' : `Could not download the letter (error ${result.status}).`);
+  }
+  return { uri: result.uri, filename };
+}
+
+export async function fetchCandidates() {
+  const { data } = await api.get<ApiEnvelope<Candidate[]>>('/hr/candidates');
+  return data.data ?? [];
+}
+
+export async function createCandidate(fields: { name: string; personalEmail?: string; personalPhone?: string; department?: string }) {
+  const { data } = await api.post<ApiEnvelope<Candidate>>('/hr/candidates', fields);
+  return data.data;
+}
+
+export async function sendOnboardingInvite(userId: string): Promise<OnboardingInviteResult> {
+  const { data } = await api.post<ApiEnvelope<OnboardingInviteResult>>(`/hr/onboarding-invites/${userId}`);
+  const d = data.data;
+  return { inviteLink: d.inviteLink, expiresAt: d.expiresAt, emailSent: !!d.emailSent, sentTo: d.sentTo ?? null, hasEmail: !!d.hasEmail };
+}
+
+export async function fetchOnboardingInviteStatus(userId: string) {
+  const { data } = await api.get<ApiEnvelope<OnboardingInviteStatusInfo | null>>(`/hr/onboarding-invites/${userId}`);
+  return data.data ?? null;
+}
+
+export async function approveCandidateOnboarding(userId: string) {
+  const { data } = await api.post<ApiEnvelope<{ user: { username: string }; temporaryPassword: string }>>(`/hr/onboarding-invites/${userId}/approve`);
+  return { username: data.data.user.username, temporaryPassword: data.data.temporaryPassword };
+}
+
+export async function fetchPreJoiningTermsLite(userId: string) {
+  const { data } = await api.get<ApiEnvelope<PreJoiningTermsLite | null>>(`/pre-joining-terms/${userId}`);
+  return data.data ?? null;
+}
+
+export async function fetchCheckInOverviewCounts() {
+  const { data } = await api.get<ApiEnvelope<{ overdue: number; upcoming: number }>>('/probation-checkins/overview-counts');
+  return data.data;
+}
+
+export async function fetchProbationCheckIns() {
+  const { data } = await api.get<ApiEnvelope<ProbationCheckIn[]>>('/probation-checkins');
+  return data.data ?? [];
 }
