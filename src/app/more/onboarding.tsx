@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+import { Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -179,7 +179,9 @@ export default function OnboardingScreen() {
   const [items, setItems] = useState<OnboardingOverviewItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  // The Applications screen opens this with ?userId= to land on that person's checklist.
+  const { userId: userIdParam } = useLocalSearchParams<{ userId?: string }>();
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(userIdParam || null);
 
   const load = useCallback(async () => {
     setError(null);

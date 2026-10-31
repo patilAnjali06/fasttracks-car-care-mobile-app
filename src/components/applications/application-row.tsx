@@ -56,6 +56,8 @@ type Props = {
   onShare: (s: ShareLink) => void;
   onInterviewInvite: (a: ApplicationRowData) => void;
   onOnboarding: (a: ApplicationRowData) => void;
+  onSchedule: (a: ApplicationRowData) => void;
+  onCreateTemplate: (role: string) => void;
   onSendStatusEmail: () => void;
   onDismissStatusEmail: () => void;
 };
@@ -65,7 +67,7 @@ type Props = {
 // candidate details (the dashboard's expanded modal).
 function ApplicationRowBase({
   application, wide, activeTab, hasLiveTemplate, statusEmail, statusEmailError, resendingStatusEmail,
-  onOpen, onChanged, onStatusChanged, onCompare, onEdit, onShare, onInterviewInvite, onOnboarding, onSendStatusEmail, onDismissStatusEmail,
+  onOpen, onChanged, onStatusChanged, onCompare, onEdit, onShare, onInterviewInvite, onOnboarding, onSchedule, onCreateTemplate, onSendStatusEmail, onDismissStatusEmail,
 }: Props) {
   const theme = useTheme();
   const [busy, setBusy] = useState(false);
@@ -88,6 +90,7 @@ function ApplicationRowBase({
   // An ARIA attempt's own scorecard wins; the application's is the fallback.
   const latestInvite = application.interviewInvites?.[0] ?? null;
   const rowInterviewScorecard = (latestInvite?.engine === 'ARIA' ? (latestInvite.scorecard ?? application.aiInterviewScorecard) : application.aiInterviewScorecard) ?? null;
+  const activeSchedule = (application.interviewSchedules ?? []).find((s) => s.status === 'SCHEDULED') ?? null;
   const hasPendingInterview = !!application.interviewInvites?.some((i) => i.status === 'PENDING');
   const canScreen = screeningStage && !!application.resumeFilename;
   const screenBlockedReason = !application.roleApplied ? 'Set the role applied for before running AI screening.' : '';
@@ -201,7 +204,14 @@ function ApplicationRowBase({
         {application.roleApplied || 'Awaiting candidate — not set yet'}
       </ThemedText>
       {application.department ? <ThemedText themeColor="textMuted" style={styles.small} numberOfLines={1}>{application.department}</ThemedText> : null}
-      {application.roleApplied && !hasLiveTemplate ? <View style={styles.tag}><Badge size="sm" variant="warning">No template</Badge></View> : null}
+      {application.roleApplied && !hasLiveTemplate ? (
+        <View style={styles.tag}>
+          <Badge size="sm" variant="warning">No template</Badge>
+          <Pressable onPress={() => onCreateTemplate(application.roleApplied!)} hitSlop={8} accessibilityRole="link">
+            <ThemedText themeColor="textMuted" style={[styles.small, styles.link]}>Create template</ThemedText>
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 
@@ -250,7 +260,7 @@ function ApplicationRowBase({
             {application.aiInterviewCompletedAt ? 'Send new interview link' : application.aiInterviewQuestions ? 'Resend Interview Invite' : 'Send AI Interview Invite'}
           </Button>
         ) : null}
-        {activeTab !== '' && stage === 'MANAGER_INTERVIEW' ? <Button size="sm" variant="secondary" onPress={() => onOpen(application)}>Schedule Interview</Button> : null}
+        {activeTab !== '' && stage === 'MANAGER_INTERVIEW' && !activeSchedule ? <Button size="sm" variant="secondary" onPress={() => onSchedule(application)}>Schedule Interview</Button> : null}
         {activeTab !== '' && stage === 'ASSESSMENT' ? <Button size="sm" variant="secondary" onPress={() => onOpen(application)}>Prepare Assessment Questions</Button> : null}
 
         {application.resumeFilename ? <Button size="sm" variant="ghost" loading={openingFile === 'resume'} onPress={() => openFile('resume', application.resumeFilename, application.resumeMimeType)}>Résumé</Button> : null}
@@ -336,7 +346,8 @@ const styles = StyleSheet.create({
   strike: { textDecorationLine: 'line-through' },
   small: { fontSize: 12, lineHeight: 18 },
   body: { fontSize: 14, lineHeight: 20 },
-  tag: { marginTop: 4, alignSelf: 'flex-start' },
+  tag: { marginTop: 4, flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
+  link: { textDecorationLine: 'underline' },
   statusRow: { paddingHorizontal: 16, paddingTop: 8 },
   badges: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 4 },
   scoreBadges: { marginTop: 4 },

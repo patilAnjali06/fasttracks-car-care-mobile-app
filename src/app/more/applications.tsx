@@ -9,14 +9,16 @@ import {
 } from '@/components/applications/application-format';
 import { ApplicationRow, type StatusEmailState } from '@/components/applications/application-row';
 import { ApplicationFormSheet, InviteCandidateSheet, LinkExpirySheet, ShareLinkSheet } from '@/components/applications/application-sheets';
-import { CompareView } from '@/components/applications/compare-view';
+import { CompareCandidates } from '@/components/applications/compare-candidates';
+import { HrAssistantButton, HrAssistantPanel, JobDescriptionSheet } from '@/components/applications/ai-assistants';
+import { InterviewScheduleSheet, type ScheduleResult } from '@/components/applications/interview-schedule';
 import { ErrorBanner } from '@/components/overview/parts';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { Button, Card, Skeleton } from '@/components/ui';
 import { FontWeights, Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
-import { fetchApplicationRows, fetchRoleCoverage, getErrorMessage, sendApplicationStatusEmail, sendInterviewInvite } from '@/lib/api';
+import { fetchApplicationRows, fetchEmployees, fetchRoleCoverage, getErrorMessage, sendApplicationStatusEmail, sendInterviewInvite } from '@/lib/api';
 import { useAuth } from '@/lib/auth-context';
 import { useContentWidth } from '@/lib/drawer-context';
 import type { ApplicationRowData, ApplicationStatus, RoleCoverage } from '@/types/api';
@@ -50,6 +52,11 @@ export default function ApplicationsScreen() {
   const [expiryFor, setExpiryFor] = useState<ApplicationRowData | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [comparingRole, setComparingRole] = useState<string | null>(null);
+  const [scheduleFor, setScheduleFor] = useState<ApplicationRowData | null>(null);
+  const [scheduleResult, setScheduleResult] = useState<ScheduleResult | null>(null);
+  const [employees, setEmployees] = useState<{ id: string; name: string }[]>([]);
+  const [jobDescOpen, setJobDescOpen] = useState(false);
+  const [hrOpen, setHrOpen] = useState(false);
 
   // Outcome email for the last Select / Reject: offered, never auto-sent.
   const [statusEmail, setStatusEmail] = useState<StatusEmailState | null>(null);
@@ -84,6 +91,12 @@ export default function ApplicationsScreen() {
   useEffect(() => {
     if (!allowed) return;
     fetchRoleCoverage().then(setRoleCoverage).catch(() => setRoleCoverage([]));
+  }, [allowed]);
+
+  // Interviewer picker for Manager Interview scheduling: fetched once, not per row.
+  useEffect(() => {
+    if (!allowed) return;
+    fetchEmployees().then((list) => setEmployees(list.filter((e) => e.isActive).map((e) => ({ id: e.id, name: e.name })))).catch(() => setEmployees([]));
   }, [allowed]);
 
   const liveRoleNames = useMemo(() => roleCoverage.filter((r) => r.hasLiveTemplate).map((r) => r.roleApplied), [roleCoverage]);
@@ -157,7 +170,11 @@ export default function ApplicationsScreen() {
     }
     setExpiryFor(a);
   }, []);
-  const goOnboarding = useCallback(() => router.push('/more/onboarding' as never), [router]);
+  // Opens Onboarding with this candidate already selected.
+  const goOnboarding = useCallback((a: ApplicationRowData) => router.push({ pathname: '/more/onboarding', params: { userId: a.convertedUserId ?? '' } } as never), [router]);
+  const openSchedule = useCallback((a: ApplicationRowData) => setScheduleFor(a), []);
+  // The competency template editor lives on the Competencies screen.
+  const createTemplate = useCallback(() => router.push('/more/competencies' as never), [router]);
   const dismissStatusEmail = useCallback(() => setStatusEmail(null), []);
 
   const renderRow = useCallback(({ item }: { item: ApplicationRowData }) => (
@@ -178,32 +195,20 @@ export default function ApplicationsScreen() {
         onShare={showShare}
         onInterviewInvite={askInterviewInvite}
         onOnboarding={goOnboarding}
+        onSchedule={openSchedule}
+        onCreateTemplate={createTemplate}
         onSendStatusEmail={sendStatusEmail}
         onDismissStatusEmail={dismissStatusEmail}
       />
       {wide ? <View style={[styles.divider, { backgroundColor: theme.border }]} /> : null}
     </View>
-  ), [wide, theme.border, theme.backgroundElement, statusFilter, liveRoleSet, statusEmail, statusEmailError, resendingStatusEmail, openDetail, updateInList, handleStatusChanged, editApplication, showShare, askInterviewInvite, goOnboarding, sendStatusEmail, dismissStatusEmail]);
+  ), [wide, theme.border, theme.backgroundElement, statusFilter, liveRoleSet, statusEmail, statusEmailError, resendingStatusEmail, openDetail, updateInList, handleStatusChanged, editApplication, showShare, askInterviewInvite, goOnboarding, openSchedule, createTemplate, sendStatusEmail, dismissStatusEmail]);
 
   if (!allowed) {
     return (
       <ThemedView style={styles.center}>
         <Stack.Screen options={{ title: 'Applications' }} />
         <ThemedText themeColor="textSecondary" style={styles.centerText}>Applications is available to Owner, Store Manager, HR and Accounting roles only.</ThemedText>
-      </ThemedView>
-    );
-  }
-
-  if (comparingRole !== null) {
-    return (
-      <ThemedView style={styles.flex1}>
-        <Stack.Screen options={{ title: 'Applications' }} />
-        <FlatList
-          data={[]}
-          renderItem={null}
-          contentContainerStyle={{ padding: Spacing.three, paddingBottom: insets.bottom + Spacing.three }}
-          ListHeaderComponent={<CompareView statusLabels={STATUS_LABELS} initialRole={comparingRole} onBack={() => setComparingRole(null)} />}
-        />
       </ThemedView>
     );
   }
@@ -224,6 +229,7 @@ export default function ApplicationsScreen() {
       <View style={styles.buttons}>
         <Button size="sm" onPress={() => setCreating(true)}>New Application</Button>
         <Button size="sm" variant="secondary" onPress={() => setInviting(true)}>Invite Candidate</Button>
+        <Button size="sm" variant="secondary" onPress={() => setJobDescOpen(true)}>Generate Job Description</Button>
         <Button size="sm" variant="secondary" disabled={!items || items.length === 0} onPress={() => setComparingRole('')}>Compare Candidates</Button>
       </View>
 
@@ -318,7 +324,35 @@ export default function ApplicationsScreen() {
           onConfirm={(hours) => { const app = expiryFor; setExpiryFor(null); sendInterviewLink(app, hours); }}
         />
       ) : null}
-      {detail ? <ApplicationDetail application={detail} onClose={() => setDetailId(null)} onChanged={updateInList} /> : null}
+      {detail ? (
+        <ApplicationDetail
+          application={detail}
+          onClose={() => setDetailId(null)}
+          onChanged={updateInList}
+          onOpenScheduleForm={() => setScheduleFor(detail)}
+          scheduleResult={scheduleResult}
+          onScheduleResult={setScheduleResult}
+        />
+      ) : null}
+      {scheduleFor ? (
+        <InterviewScheduleSheet
+          application={scheduleFor}
+          employees={employees}
+          existing={(scheduleFor.interviewSchedules ?? []).find((sc) => sc.status === 'SCHEDULED') ?? null}
+          onCancel={() => setScheduleFor(null)}
+          onDone={(a, result) => { updateInList(a); setScheduleResult(result); setScheduleFor(null); setDetailId(a.id); }}
+        />
+      ) : null}
+      {comparingRole !== null ? (
+        <CompareCandidates
+          initialRole={comparingRole}
+          roles={Array.from(new Set((items ?? []).map((a) => a.roleApplied).filter((r): r is string => !!r))).sort((x, y) => x.localeCompare(y))}
+          onClose={() => { setComparingRole(null); load(); }}
+        />
+      ) : null}
+      {jobDescOpen ? <JobDescriptionSheet onClose={() => setJobDescOpen(false)} /> : null}
+      {hrOpen ? <HrAssistantPanel onClose={() => setHrOpen(false)} /> : null}
+      {!hrOpen ? <HrAssistantButton onPress={() => setHrOpen(true)} bottom={insets.bottom + 16} /> : null}
     </ThemedView>
   );
 }

@@ -3343,18 +3343,14 @@ export interface ApplicationQuestionAnswers {
   additionalInfo?: string;
 }
 
-export interface ApplicationRowExtras {
+export interface ApplicationRowExtras extends ApplicationPhase2Extras {
   hasAadhaar?: boolean;
   aadhaarSelfDeclared?: boolean;
   aadhaarSelfDeclaredAt?: string | null;
   candidateQuestionAnswers?: ApplicationQuestionAnswers | null;
   convertedUser?: { onboardingStatus?: string | null; _count: { onboardingInvitesReceived: number } } | null;
-  aiInterviewScorecard?: AiScorecardSummary | null;
   aiInterviewCompletedAt?: string | null;
-  aiInterviewQuestions?: unknown;
-  aiAssignmentScorecard?: AiScorecardSummary | null;
   aiAssignmentCompletedAt?: string | null;
-  interviewInvites?: { engine?: string; status?: string; scorecard?: AiScorecardSummary | null }[];
 }
 
 export type ApplicationRowData = Application & ApplicationRowExtras;
@@ -3378,4 +3374,123 @@ export interface ApplicationStatusEmailResult {
   emailSent: boolean;
   sentTo: string | null;
   hasEmail?: boolean;
+}
+
+// ── Applications Phase 2 (dashboard applications/page.tsx panels) ───────────
+export interface CompetencyScoreEntry {
+  competencyId: string;
+  name: string;
+  weightage: number;
+  score: number;
+  rationale?: string;
+  /** ARIA only: false when the interview ended before this competency was reached. */
+  covered?: boolean;
+  /** ARIA only: false when every reply was a non-answer. */
+  answered?: boolean;
+}
+
+// Interview / assignment scorecard (backend lib/aiInterview.ts, ariaInterview.ts, aiAssignment.ts).
+export interface AiFullScorecard {
+  competencyScores: CompetencyScoreEntry[];
+  weightedOverallScore: number;
+  /** ARIA only. 0 means "Not enough data". */
+  answeredCount?: number;
+  totalCompetencies?: number;
+  flaggedForReview: boolean;
+  flagReason: string | null;
+  modelUsed: string;
+}
+
+export interface AriaTranscriptTurn {
+  turnIndex: number;
+  role: 'aria' | 'candidate';
+  kind: 'intro' | 'question' | 'followup' | 'reprompt' | 'closing' | 'answer';
+  text: string;
+  competencyId?: string;
+  isEmpty?: boolean;
+  isRepeatRequest?: boolean;
+  isSkip?: boolean;
+  isNonAnswer?: boolean;
+  sttConfidence?: number;
+  answerAudioBlobName?: string;
+  timestamp: string;
+}
+
+export interface AriaProctoringEvent {
+  type: 'VIOLATION' | 'COPY_ATTEMPT' | 'PASTE_ATTEMPT';
+  reason?: string;
+  at: string;
+}
+
+// One INTERVIEW-type invite (an Aria session), most recent first on Application.interviewInvites.
+export interface AiInterviewInviteFull {
+  id: string;
+  engine: 'LEGACY' | 'ARIA';
+  transcript: AriaTranscriptTurn[] | null;
+  status: 'PENDING' | 'USED' | 'REVOKED' | 'EXPIRED';
+  terminationReason: string | null;
+  createdAt: string;
+  usedAt: string | null;
+  proctoringEvents: AriaProctoringEvent[] | null;
+  scorecard: AiFullScorecard | null;
+  cameraRecordingBlobName?: string | null;
+  screenRecordingBlobName?: string | null;
+}
+
+export interface CandidateActivity {
+  tabSwitches?: { leftAt: string; returnedAt?: string }[];
+  largePastes?: { competencyId: string; chars: number; at: string }[];
+  autoSubmitted?: boolean;
+}
+
+export interface CompetencyTaskItem {
+  competencyId: string;
+  competencyName: string;
+}
+
+export interface ApplicationPhase2Extras {
+  interviewInvites?: AiInterviewInviteFull[];
+  aiInterviewScorecard?: AiFullScorecard | null;
+  aiAssignmentScorecard?: AiFullScorecard | null;
+  aiInterviewActivity?: CandidateActivity | null;
+  aiAssignmentActivity?: CandidateActivity | null;
+  aiInterviewQuestions?: CompetencyTaskItem[] | null;
+  aiAssignmentTasks?: CompetencyTaskItem[] | null;
+  hasDraftQuestions?: boolean;
+  hasSentAssessmentInvite?: boolean;
+}
+
+export interface PracticalScorecard {
+  questionScores: { questionId: string; questionText: string; score: number; rationale: string }[];
+  overallScore: number;
+  flaggedForReview: boolean;
+  flagReason: string | null;
+  modelUsed: string;
+}
+
+// GET /:id/practical-questions in full: questions + the AI scorecard + sent-assessment recordings.
+export interface PracticalQuestionsFull {
+  questions: PracticalQuestion[];
+  scorecard: PracticalScorecard | null;
+  recordings?: { id: string; createdAt: string; usedAt: string | null }[];
+}
+
+// GET /applications/compare rows with the full scorecards the compare table breaks down.
+export interface CompareCandidateFull {
+  id: string;
+  name: string;
+  status: ApplicationStatus;
+  aiScreeningResult: AiScreeningResult | null;
+  aiScreenedAt: string | null;
+  aiInterviewScorecard: AiFullScorecard | null;
+  aiInterviewCompletedAt: string | null;
+  aiAssignmentScorecard: AiFullScorecard | null;
+  aiAssignmentCompletedAt: string | null;
+  createdAt: string;
+  interviewInvites: { engine: 'LEGACY' | 'ARIA'; status: string; terminationReason: string | null; proctoringEvents: AriaProctoringEvent[] | null; createdAt: string }[];
+}
+
+export interface HrChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
 }

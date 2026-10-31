@@ -2,12 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { Modal, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AiInterviewInviteSection } from '@/components/applications/ai-interview-invite-section';
-import { AiScreeningSection } from '@/components/applications/ai-screening-section';
+import { AiScreeningPanel } from '@/components/applications/ai-screening-panel';
 import { CANDIDATE_QUESTION_LABELS, fmtDateTime } from '@/components/applications/application-format';
-import { DocumentsSection } from '@/components/applications/documents-section';
-import { InterviewSection } from '@/components/applications/interview-section';
-import { PracticalQuestionsSection } from '@/components/applications/practical-questions-section';
+import { InterviewSchedulePanel, type ScheduleResult } from '@/components/applications/interview-schedule';
+import { PracticalAssessmentPanel } from '@/components/applications/practical-panel';
+import { ScorecardPanel } from '@/components/applications/scorecard-panel';
 import { ThemedText } from '@/components/themed-text';
 import { FontWeights, Radii, Spacing } from '@/constants/theme';
 import { useTheme } from '@/hooks/use-theme';
@@ -18,6 +17,9 @@ type Props = {
   application: ApplicationRowData;
   onClose: () => void;
   onChanged: (a: ApplicationRowData) => void;
+  onOpenScheduleForm: () => void;
+  scheduleResult: ScheduleResult | null;
+  onScheduleResult: (r: ScheduleResult | null) => void;
 };
 
 function Row({ label, value, full }: { label: string; value: string; full?: boolean }) {
@@ -29,11 +31,12 @@ function Row({ label, value, full }: { label: string; value: string; full?: bool
   );
 }
 
-// The dashboard's expanded "Candidate Details" modal: candidate info, the
-// Aadhaar self-declaration note, the candidate's own answers, then the
-// screening / interview / assessment sections, in the same order. Full screen
-// on a phone; the content is the same on a wide screen.
-export function ApplicationDetail({ application, onClose, onChanged }: Props) {
+// The dashboard's expanded "Candidate Details" modal, in the same order:
+// candidate info, the Aadhaar self-declaration note, the candidate's own
+// answers, AI screening, the interview scorecard, the interview schedule,
+// the assessment stage with its practical questions, the assessment
+// scorecard. Full screen on a phone.
+export function ApplicationDetail({ application, onClose, onChanged, onOpenScheduleForm, scheduleResult, onScheduleResult }: Props) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const wide = useContentWidth() >= 560;
@@ -43,8 +46,9 @@ export function ApplicationDetail({ application, onClose, onChanged }: Props) {
   const answers = a.candidateQuestionAnswers;
   const hasAnswers = !!answers && Object.keys(answers).length > 0;
   const inPipeline = !a.convertedUserId && a.status !== 'REJECTED';
-  const hasSignals = (x?: unknown) => !!x;
-  const hasRowDetails = !!(a.hasAadhaar || a.aadhaarImageFilename) || hasAnswers || a.status === 'MANAGER_INTERVIEW' || !!a.aiScreeningResult || hasSignals(a.aiInterviewScorecard) || hasSignals(a.aiAssignmentScorecard);
+  const hasSignals = (x?: { tabSwitches?: unknown[]; largePastes?: unknown[] } | null) => !!(x?.tabSwitches?.length || x?.largePastes?.length);
+  const hasRowDetails = !!(a.hasAadhaar || a.aadhaarImageFilename) || hasAnswers || (inPipeline && a.status === 'MANAGER_INTERVIEW') || !!a.aiScreeningResult
+    || !!a.aiInterviewScorecard || hasSignals(a.aiInterviewActivity) || !!a.aiAssignmentScorecard || hasSignals(a.aiAssignmentActivity);
 
   const panel = [styles.panel, { backgroundColor: theme.surface, borderBottomColor: theme.border }];
 
@@ -100,12 +104,18 @@ export function ApplicationDetail({ application, onClose, onChanged }: Props) {
             </View>
           ) : null}
 
-          <AiScreeningSection application={a} onApplicationChanged={(next) => onChanged(next as ApplicationRowData)} />
-          <AiInterviewInviteSection application={a} />
-          {inPipeline ? <InterviewSection application={a} onApplicationChanged={(next) => onChanged(next as ApplicationRowData)} /> : null}
-          {a.status === 'ASSESSMENT' ? <ThemedText themeColor="textMuted" style={styles.sectionTitle}>ASSESSMENT STAGE</ThemedText> : null}
-          <PracticalQuestionsSection application={a} />
-          <DocumentsSection application={a} />
+          <AiScreeningPanel application={a} onChanged={onChanged} />
+          <ScorecardPanel application={a} stage="INTERVIEW" />
+          {inPipeline ? (
+            <InterviewSchedulePanel application={a} onChanged={onChanged} onOpenForm={onOpenScheduleForm} lastResult={scheduleResult} onResult={onScheduleResult} />
+          ) : null}
+          {a.status === 'ASSESSMENT' ? (
+            <View style={panel}>
+              <ThemedText themeColor="textMuted" style={styles.sectionTitle}>ASSESSMENT STAGE</ThemedText>
+            </View>
+          ) : null}
+          <PracticalAssessmentPanel application={a} />
+          <ScorecardPanel application={a} stage="ASSESSMENT" />
 
           {!hasRowDetails ? (
             <ThemedText themeColor="textMuted" style={styles.small}>

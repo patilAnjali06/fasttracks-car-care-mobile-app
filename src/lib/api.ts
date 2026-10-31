@@ -244,6 +244,9 @@ import type {
   CrmSearchBy,
   HandledByEmployee,
   ApplicationFormInput,
+  CompareCandidateFull,
+  HrChatMessage,
+  PracticalQuestionsFull,
   ApplicationRowData,
   ApplicationStatusEmailResult,
   EmployeeAnalyticsRaw,
@@ -3570,4 +3573,60 @@ export async function changeApplicationStatus(id: string, status: ApplicationSta
 export async function sendApplicationStatusEmail(id: string) {
   const { data } = await api.post<ApiEnvelope<ApplicationStatusEmailResult>>(`/applications/${id}/status-email`);
   return data.data;
+}
+
+// ── Applications Phase 2 ─────────────────────────────────────────────────────
+export async function fetchPracticalQuestionsFull(id: string) {
+  const { data } = await api.get<ApiEnvelope<PracticalQuestionsFull>>(`/applications/${id}/practical-questions`);
+  return data.data;
+}
+
+// POST /:id/interview-schedule/:scheduleId/resend: re-sends the same invite, no changes.
+export async function resendInterviewScheduleInvite(id: string, scheduleId: string) {
+  const { data } = await api.post<ApiEnvelope<{ candidateEmailed: boolean; interviewerEmailed: boolean; candidateHasEmail: boolean; interviewerHasEmail: boolean }>>(
+    `/applications/${id}/interview-schedule/${scheduleId}/resend`,
+  );
+  return data.data;
+}
+
+// GET /applications/compare?role= with the full scorecards (competency breakdowns).
+export async function fetchCandidateComparisonFull(role: string) {
+  const { data } = await api.get<ApiEnvelope<CompareCandidateFull[]>>('/applications/compare', { params: { role } });
+  return data.data ?? [];
+}
+
+// POST /applications/job-description (AI draft; slow, like the other AI routes).
+export async function generateJobDescription(fields: { roleName: string; department?: string; context?: string }) {
+  const { data } = await api.post<ApiEnvelope<{ description: string }>>('/applications/job-description', fields, { timeout: 120000 });
+  return data.data.description;
+}
+
+// POST /hr-assistant/chat: read-only lookups, nothing persisted server-side.
+export async function hrAssistantChat(messages: HrChatMessage[]) {
+  const { data } = await api.post<ApiEnvelope<{ reply: string }>>('/hr-assistant/chat', { messages }, { timeout: 120000 });
+  return data.data.reply;
+}
+
+// Interview recordings are streamed behind the Bearer token (HR only). Same
+// download-to-cache approach as downloadApplicationFile; a non-2xx is deleted
+// rather than saved as a "file".
+async function downloadRecording(path: string, filename: string): Promise<string> {
+  const token = await tokenStorage.get();
+  const dest = `${FileSystem.cacheDirectory}${filename}`;
+  const result = await FileSystem.downloadAsync(`${API_BASE_URL}${path}`, dest, {
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+  });
+  if (result.status < 200 || result.status >= 300) {
+    await FileSystem.deleteAsync(result.uri, { idempotent: true }).catch(() => {});
+    throw new Error(result.status === 404 ? 'This recording is no longer available.' : `Could not download the recording (error ${result.status}).`);
+  }
+  return result.uri;
+}
+
+export function downloadInterviewRecording(applicationId: string, inviteId: string, kind: 'camera' | 'screen') {
+  return downloadRecording(`/applications/${applicationId}/interview-invite/${inviteId}/recording/${kind}`, `interview-${kind}-${inviteId}.mp4`);
+}
+
+export function downloadAnswerRecording(applicationId: string, inviteId: string, turnIndex: number) {
+  return downloadRecording(`/applications/${applicationId}/interview-invite/${inviteId}/answer-recording/${turnIndex}`, `answer-${inviteId}-${turnIndex}.audio`);
 }
